@@ -29,7 +29,16 @@ function escUrl(s) {
 async function initDb() {
   const d = getDb();
   const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
-  await d.query(schema);
+  // Ejecuta cada sentencia por separado: si una falla (ej. tabla ya existe
+  // sin la columna), las demas igual se aplican y el error queda en el log.
+  const statements = schema.split(/;\s*\n/).map((s) => s.trim()).filter(Boolean);
+  for (const st of statements) {
+    try {
+      await d.query(st);
+    } catch (e) {
+      console.error('Schema stmt fallo (sigue):', e.message);
+    }
+  }
   const u = await d.query('SELECT COUNT(*)::int AS n FROM users');
   if (u.rows[0].n === 0) {
     await d.query(
@@ -132,10 +141,14 @@ app.post('/api/auth/register', async (req, res) => {
       row = r.rows[0];
     } catch (e) {
       if (e.code === '23505') return res.status(409).json({ error: 'Ese numero ya esta registrado. Inicia sesion.' });
+      console.error('REGISTER fallo:', e.code, e.message);
       throw e;
     }
     res.status(201).json({ user: row });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    console.error('REGISTER 500:', e.code || '', e.message || e);
+    res.status(500).json({ error: (e.code ? e.code + ' ' : '') + (e.message || 'Error interno') });
+  }
 });
 
 app.post('/api/auth/login', async (req, res) => {
