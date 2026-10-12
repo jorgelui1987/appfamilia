@@ -42,7 +42,7 @@ var AppChat = (function (Store, App) {
         }
       } catch (e) {}
       if (Store.backend.ok) {
-        Api.request({ method: 'POST', url: '/api/channels/dm', body: { id: id, peerId: other.id } }).catch(function () {});
+        Api.createDM(id, other.id).catch(function () {});
       }
     } else {
       exists.peerId = other.id;

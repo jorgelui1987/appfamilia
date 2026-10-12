@@ -16,6 +16,7 @@ var Api = (function () {
   }
   return {
     request: req,
+    post: function (url, body) { return req('POST', url, body); },
     health: () => req('GET', '/api/health'),
     users: () => req('GET', '/api/users'),
     posts: () => req('GET', '/api/posts'),
@@ -23,6 +24,7 @@ var Api = (function () {
     comment: (id, d) => req('POST', '/api/posts/' + id + '/comments', d),
     like: (id, userId) => req('POST', '/api/posts/' + id + '/like', { userId }),
     channels: () => req('GET', '/api/channels'),
+    createDM: (id, peerId) => req('POST', '/api/channels/dm', { id: id, peerId: peerId }),
     messages: (id) => req('GET', '/api/channels/' + id + '/messages'),
     sendMessage: (id, d) => req('POST', '/api/channels/' + id + '/messages', d),
     register: (d) => req('POST', '/api/auth/register', d),

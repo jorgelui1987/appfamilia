@@ -246,7 +246,7 @@ var Backend = (function (Store) {
         const me = String(Store.currentUser().id);
         const peerId = m ? (String(m[1]) === me ? m[2] : m[1]) : null;
         if (peerId) {
-          await Api.request('POST', '/api/channels/dm', { id: channelId, peerId: Number(peerId) });
+          await Api.createDM(channelId, Number(peerId));
         }
       } catch (e) { /* sigue: el POST del mensaje lo intentara igual */ }
     }
