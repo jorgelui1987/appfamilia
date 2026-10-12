@@ -1,5 +1,5 @@
 'use strict';
-require('dotenv').config();
+try { require('dotenv').config(); } catch (e) { /* dotenv opcional en Dokploy */ }
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
