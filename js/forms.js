@@ -195,15 +195,22 @@ var AppForms = (function (Store, App, AppChat) {
         caption: caption.slice(0, 500),
         tag: $('modal-tag').value,
         imageUrl: $('image-preview').src || ''
-      }).then(function () {
+      }).then(function (r) {
         AppChat.closeModal('upload-modal');
         e.target.reset();
         $('image-preview-container').classList.add('hidden');
         App.switchTab('feed');
         App.renderPosts();
-        App.toast('Recuerdo publicado y guardado en la base de datos');
+        App.toast(r && r.local ? 'Recuerdo publicado en este dispositivo (sin servidor)' : 'Recuerdo publicado y guardado en la base de datos');
       }).catch(function (err) {
-        $('upload-error').textContent = 'No se pudo guardar: ' + err.message;
+        var m = String((err && err.message) || err);
+        var j = null;
+        try {
+          var s = m.indexOf('{');
+          var x = m.lastIndexOf('}');
+          if (s > -1 && x > s) j = JSON.parse(m.slice(s, x + 1));
+        } catch (ee) {}
+        $('upload-error').textContent = (j && j.error) ? j.error : 'No se pudo guardar: ' + m.slice(0, 160);
       }).then(function () {
         if (btn) { btn.disabled = false; btn.textContent = 'Publicar para la Familia'; }
       });

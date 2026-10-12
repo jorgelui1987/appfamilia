@@ -41,6 +41,7 @@ var Backend = (function (Store) {
     } catch (e) {
       Store.backend.ok = false;
     }
+    loadLocalPosts();
   }
 
   async function refreshPosts() {
@@ -82,10 +83,49 @@ var Backend = (function (Store) {
     }
   }
 
+  function saveLocalPosts() {
+    try {
+      const slim = Store.posts.slice(0, 30).map((p) => ({
+        id: p.id, userId: p.userId, userName: p.userName, userFamily: p.userFamily,
+        userAvatar: String(p.userAvatar || '').slice(0, 200000),
+        imageUrl: String(p.imageUrl || '').slice(0, 2000000),
+        caption: p.caption, tag: p.tag, timestamp: p.timestamp, likes: p.likes || [],
+        comments: p.comments || [], local: true
+      }));
+      localStorage.setItem('mf-local-posts', JSON.stringify(slim));
+    } catch (e) {}
+  }
+
+  function loadLocalPosts() {
+    try {
+      const raw = JSON.parse(localStorage.getItem('mf-local-posts') || '[]');
+      if (Array.isArray(raw)) {
+        raw.forEach((lp) => {
+          const exists = Store.posts.some((p) => String(p.id) === String(lp.id));
+          if (!exists) Store.posts.unshift(normalizePost(lp));
+        });
+      }
+    } catch (e) {}
+  }
+
   async function createPost(data) {
-    const res = await Api.createPost(data);
-    await refreshPosts();
-    return res;
+    try {
+      const res = await Api.createPost(data);
+      await refreshPosts();
+      return res;
+    } catch (e) {
+      // Sin servidor: publica en modo local y sigue funcionando.
+      const me = Store.currentUser();
+      const post = normalizePost({
+        id: 'local-' + Date.now(), userId: me.id, userName: me.name,
+        userFamily: me.family, userAvatar: me.avatar,
+        imageUrl: data.imageUrl || '', caption: data.caption, tag: data.tag || 'Cotidiano',
+        timestamp: 'Ahora', likes: [], comments: [], local: true
+      });
+      Store.posts.unshift(post);
+      saveLocalPosts();
+      return { local: true, post };
+    }
   }
 
   async function sendMessage(channelId, text) {
