@@ -30,6 +30,8 @@ var Api = (function () {
     register: (d) => req('POST', '/api/auth/register', d),
     login: (d) => req('POST', '/api/auth/login', d),
     reset: (d) => req('POST', '/api/auth/reset', d),
-    updateAvatar: (id, avatar) => req('PUT', '/api/users/' + id + '/avatar', { avatar })
+    updateAvatar: (id, avatar) => req('PUT', '/api/users/' + id + '/avatar', { avatar }),
+    heartbeat: (userId) => req('POST', '/api/presence', { userId }),
+    presence: () => req('GET', '/api/presence')
   };
 })();

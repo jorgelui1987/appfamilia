@@ -77,5 +77,5 @@ var Store = (function () {
     } catch (e) {}
   }
 
-  return { users: users, posts: posts, channels: channels, messages: messages, state: state, backend: { ok: false }, getUser: getUser, currentUser: currentUser, restoreLocalUsers: restoreLocalUsers };
+  return { users: users, posts: posts, channels: channels, messages: messages, state: state, backend: { ok: false }, online: {}, getUser: getUser, currentUser: currentUser, restoreLocalUsers: restoreLocalUsers };
 })();

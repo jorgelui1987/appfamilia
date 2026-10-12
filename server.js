@@ -316,6 +316,29 @@ app.post('/api/channels/:id/messages', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Presencia estilo WhatsApp: quien esta con la app abierta sale "en linea".
+// Memoria en el servidor (se pierde al redeploy, no pasa nada: se rellena solo).
+const presence = new Map(); // userId -> lastSeenMs
+app.post('/api/presence', async (req, res) => {
+  try {
+    const id = Number((req.body || {}).userId) || 0;
+    if (!id) return res.status(400).json({ error: 'userId requerido' });
+    presence.set(id, Date.now());
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.get('/api/presence', async (req, res) => {
+  try {
+    const now = Date.now();
+    const online = [];
+    presence.forEach((ts, id) => {
+      if (now - ts < 45000) online.push(id);
+      else presence.delete(id);
+    });
+    res.json({ online });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Tiempo real simple con SSE: avisa a la PWA cuando hay mensaje nuevo.
 const sseClients = [];
 function notifyChannel(channelId) {

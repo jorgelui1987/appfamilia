@@ -195,10 +195,20 @@ var AppChat = (function (Store, App) {
       el.setAttribute('aria-selected', String(active));
       el.className = 'w-full text-left p-3.5 flex items-center gap-3 transition ' + (active ? 'bg-emerald-50 border-r-4 border-emerald-600' : 'hover:bg-slate-100');
       el.dataset.channel = ch.id;
+      // Presencia estilo WhatsApp: punto verde si el familiar esta en la app.
+      var peerOnline = false;
+      try {
+        var _pid = ch.peerId != null ? ch.peerId : peerOf(ch.id);
+        peerOnline = !!(_pid != null && Store.online && Store.online[String(_pid)]);
+      } catch (e) {}
+      var dotHtml = (!ch.dm || peerOnline) ? '' : '';
       var avatar = ch.type === 'group'
         ? '<div class="w-11 h-11 rounded-full ' + ch.color + ' text-white flex items-center justify-center"><i class="fa-solid ' + ch.icon + '"></i></div>'
-        : '<span class="relative"><img src="' + escapeHtml(ch.avatar) + '" alt="" loading="lazy" class="w-11 h-11 rounded-full object-cover" />' + (ch.dm ? '<span class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-slate-900 text-emerald-400 rounded-full text-[9px] flex items-center justify-center" title="Privado"><i class="fa-solid fa-lock"></i></span>' : '') + '</span>';
-      el.innerHTML = avatar + '<div class="flex-1 overflow-hidden"><h4 class="font-bold text-sm truncate">' + escapeHtml(ch.name) + '</h4><p class="text-xs text-slate-500 truncate">' + escapeHtml(ch.subtitle) + '</p></div>';
+        : '<span class="relative"><img src="' + escapeHtml(ch.avatar) + '" alt="" loading="lazy" class="w-11 h-11 rounded-full object-cover" />' + (ch.dm ? '<span class="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center ' + (peerOnline ? 'bg-emerald-500' : 'bg-slate-400') + '" title="' + (peerOnline ? 'En linea' : 'Desconectado') + '"></span><span class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-slate-900 text-emerald-400 rounded-full text-[9px] items-center justify-center hidden" title="Privado"><i class="fa-solid fa-lock"></i></span>' : '') + '</span>';
+      var sub = ch.subtitle || '';
+      // En privados muestra "en linea" como WhatsApp cuando el otro esta en la app.
+      if (ch.dm && peerOnline) sub = 'en linea';
+      el.innerHTML = avatar + '<div class="flex-1 overflow-hidden"><h4 class="font-bold text-sm truncate">' + escapeHtml(ch.name) + '</h4><p class="text-xs truncate ' + (ch.dm && peerOnline ? 'text-emerald-600 font-semibold' : 'text-slate-500') + '">' + escapeHtml(sub) + '</p></div>' + dotHtml;
       list.appendChild(el);
     });
     if (!shown) {
@@ -390,6 +400,44 @@ var AppChat = (function (Store, App) {
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
   }
 
+  var presenceTimer = null;
+  // Presencia estilo WhatsApp: aviso cada 20s que sigo en la app + pregunto
+  // quienes estan en linea para pintar el punto verde. Sin servidor = nadie.
+  function startPresence() {
+    if (presenceTimer) return;
+    Store.online = Store.online || {};
+    function beat() {
+      if (!Store.backend.ok) return;
+      var me = null;
+      try { me = Store.currentUser(); } catch (e) {}
+      if (!me || !me.id) return;
+      Api.heartbeat(me.id).catch(function () {});
+      Api.presence().then(function (r) {
+        var map = {};
+        ((r && r.online) || []).forEach(function (id) { map[String(id)] = true; });
+        Store.online = map;
+        renderChannels();
+        // Refresca el "en linea" del encabezado si estas en un privado.
+        try {
+          var cur = Store.state.activeChatId;
+          var ch = null;
+          Store.channels.forEach(function (c) { if (String(c.id) === String(cur)) ch = c; });
+          if (ch && ch.dm) {
+            var pid = ch.peerId != null ? ch.peerId : peerOf(ch.id);
+            var on = pid != null && Store.online[String(pid)];
+            var sub = $('active-chat-subtitle');
+            if (sub) {
+              sub.textContent = on ? 'en linea' : (ch.subtitle || '');
+              sub.className = 'text-xs truncate ' + (on ? 'text-emerald-600 font-semibold' : 'text-slate-400');
+            }
+          }
+        } catch (e) {}
+      }).catch(function () {});
+    }
+    beat();
+    presenceTimer = setInterval(beat, 20000);
+  }
+
   var sseOn = false;
   function startLive() {
     if (sseOn) return;
@@ -459,8 +507,20 @@ var AppChat = (function (Store, App) {
     var ch = null;
     Store.channels.forEach(function (c) { if (c.id === id) ch = c; });
     if (ch) {
+      var sub = ch.subtitle || '';
+      // Si es privado y el otro esta en la app, muestra "en linea" arriba.
+      try {
+        var _pid = ch.peerId != null ? ch.peerId : peerOf(ch.id);
+        if (ch.dm && _pid != null && Store.online && Store.online[String(_pid)]) sub = 'en linea';
+      } catch (e) {}
       $('active-chat-title').textContent = ch.name;
-      $('active-chat-subtitle').textContent = ch.subtitle;
+      $('active-chat-subtitle').textContent = sub;
+      try {
+        var _on = false;
+        var _p2 = ch.peerId != null ? ch.peerId : peerOf(ch.id);
+        _on = !!(_p2 != null && Store.online && Store.online[String(_p2)]);
+        $('active-chat-subtitle').className = 'text-xs truncate ' + (ch.dm && _on ? 'text-emerald-600 font-semibold' : 'text-slate-400');
+      } catch (e) {}
       $('active-chat-icon').innerHTML = ch.type === 'group'
         ? '<i class="fa-solid ' + ch.icon + '"></i>'
         : '<img src="' + escapeHtml(ch.avatar) + '" class="w-10 h-10 rounded-full object-cover" alt="" />';
@@ -510,6 +570,7 @@ var AppChat = (function (Store, App) {
     startPolling();
     startLive();
     startWatcher();
+    startPresence();
     // Al entrar al Chat se limpia el aviso pendiente.
     document.addEventListener('click', function (e) {
       var tab = e.target.closest && e.target.closest('[data-tab="chat"]');
