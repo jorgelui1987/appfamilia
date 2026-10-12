@@ -87,6 +87,7 @@ var Backend = (function (Store) {
       setSyncBadge('local');
     }
     loadLocalPosts();
+    loadLocalMsgs();
   }
 
   async function refreshPosts() {
@@ -153,6 +154,34 @@ var Backend = (function (Store) {
     } catch (e) {}
   }
 
+  function saveLocalMsgs() {
+    try {
+      const slim = {};
+      Object.keys(Store.messages || {}).forEach((k) => {
+        slim[k] = (Store.messages[k] || []).slice(-100);
+      });
+      localStorage.setItem('mf-local-msgs', JSON.stringify(slim));
+    } catch (e) {}
+  }
+
+  function loadLocalMsgs() {
+    try {
+      const raw = JSON.parse(localStorage.getItem('mf-local-msgs') || '{}');
+      Object.keys(raw || {}).forEach((k) => {
+        if (!Array.isArray(Store.messages[k]) || !Store.messages[k].length) {
+          Store.messages[k] = raw[k];
+        } else {
+          const seen = {};
+          Store.messages[k].forEach((m) => { seen[m.sender + '|' + m.text + '|' + m.time] = true; });
+          raw[k].forEach((m) => {
+            const key = m.sender + '|' + m.text + '|' + m.time;
+            if (!seen[key]) Store.messages[k].push(m);
+          });
+        }
+      });
+    } catch (e) {}
+  }
+
   async function createPost(data) {
     try {
       const res = await Api.createPost(data);
@@ -177,9 +206,16 @@ var Backend = (function (Store) {
     try {
       await Api.sendMessage(channelId, { sender: Store.currentUser().name, text: text });
       await refreshMessages(channelId);
+      saveLocalMsgs();
     } catch (e) {
       Store.messages[channelId] = Store.messages[channelId] || [];
-      Store.messages[channelId].push({ sender: Store.currentUser().name, text: text, time: 'Ahora' });
+      Store.messages[channelId].push({
+        sender: Store.currentUser().name,
+        text: text,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        local: true
+      });
+      saveLocalMsgs();
     }
   }
 

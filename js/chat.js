@@ -57,6 +57,22 @@ var AppChat = (function (Store, App) {
     box.scrollTop = box.scrollHeight;
   }
 
+  function showConvOnMobile() {
+    if (window.innerWidth >= 640) return;
+    var list = $('chat-list-pane');
+    var conv = $('chat-conv-pane');
+    if (list) list.classList.add('hidden');
+    if (conv) { conv.classList.remove('hidden'); conv.classList.add('flex'); }
+  }
+
+  function showListOnMobile() {
+    if (window.innerWidth >= 640) return;
+    var list = $('chat-list-pane');
+    var conv = $('chat-conv-pane');
+    if (conv) { conv.classList.add('hidden'); conv.classList.remove('flex'); }
+    if (list) list.classList.remove('hidden');
+  }
+
   function selectChannel(id) {
     Store.state.activeChatId = id;
     var ch = null;
@@ -70,6 +86,7 @@ var AppChat = (function (Store, App) {
     }
     renderChannels();
     renderMessages();
+    showConvOnMobile();
     Backend.refreshMessages(id).then(renderMessages);
   }
 
@@ -93,9 +110,15 @@ var AppChat = (function (Store, App) {
       if (!text) return;
       var id = Store.state.activeChatId;
       input.value = '';
-      Backend.sendMessage(id, text.slice(0, 500)).then(renderMessages);
+      input.focus();
+      Backend.sendMessage(id, text.slice(0, 500)).then(function () {
+        renderMessages();
+        if (!Store.backend.ok) App.toast('Mensaje guardado en este dispositivo (sin servidor)');
+      });
       renderMessages();
     });
+    var back = $('chat-back-btn');
+    if (back) back.addEventListener('click', showListOnMobile);
     $('chat-photo-btn').addEventListener('click', function () {
       App.toast('Adjunta una foto desde el muro con Compartir recuerdo');
     });
