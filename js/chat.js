@@ -17,10 +17,10 @@ var AppChat = (function (Store, App) {
     var list = $('chat-channels-list');
     if (!list) return;
     list.innerHTML = '';
-    var q = (Store.state.chatSearch || '').toLowerCase();
+    var q = (Store.state.chatSearch || '').toLowerCase().trim();
     var shown = 0;
     Store.channels.forEach(function (ch) {
-      if (ch.name.toLowerCase().indexOf(q) === -1) return;
+      if (q && ch.name.toLowerCase().indexOf(q) === -1 && (ch.subtitle || '').toLowerCase().indexOf(q) === -1) return;
       shown++;
       var active = ch.id === Store.state.activeChatId;
       var el = document.createElement('button');
@@ -35,7 +35,20 @@ var AppChat = (function (Store, App) {
       el.innerHTML = avatar + '<div class="flex-1 overflow-hidden"><h4 class="font-bold text-sm truncate">' + escapeHtml(ch.name) + '</h4><p class="text-xs text-slate-500 truncate">' + escapeHtml(ch.subtitle) + '</p></div>';
       list.appendChild(el);
     });
-    if (!shown) list.innerHTML = '<p class="p-4 text-xs text-slate-400 text-center">Sin resultados para tu busqueda.</p>';
+    if (!shown) {
+      if (q) {
+        list.innerHTML = '<div class="p-6 text-center"><p class="text-xs text-slate-400 mb-3">Sin resultados para "' + escapeHtml(Store.state.chatSearch) + '". Ese campo solo busca chats, no personas.</p><button type="button" id="chat-clear-search" class="text-xs font-bold text-emerald-600 underline">Ver todos los chats</button></div>';
+        var clear = $('chat-clear-search');
+        if (clear) clear.addEventListener('click', function () {
+          Store.state.chatSearch = '';
+          var input = $('chat-search');
+          if (input) input.value = '';
+          renderChannels();
+        });
+      } else {
+        list.innerHTML = '<div class="p-6 text-center"><p class="text-xs text-slate-400 mb-1">Aun no hay chats aqui.</p><p class="text-[11px] text-slate-400">Si ves Local arriba, solo ves este dispositivo. Revisa Postgres para compartir.</p></div>';
+      }
+    }
   }
 
   function renderMessages() {
