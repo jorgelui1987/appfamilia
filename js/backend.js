@@ -84,7 +84,11 @@ var Backend = (function (Store) {
         const ids = channels.map((c) => c.id);
         if (ids.indexOf(Store.state.activeChatId) === -1) Store.state.activeChatId = ids[0];
         for (const c of channels) {
-          try { Store.messages[c.id] = await Api.messages(c.id); }
+          try {
+            const srv = await Api.messages(c.id);
+            Store.messages[c.id] = srv;
+            mergeMsgs(c.id, srv);
+          }
           catch (e) { if (!Store.messages[c.id]) Store.messages[c.id] = []; }
         }
       }
@@ -109,10 +113,28 @@ var Backend = (function (Store) {
     } catch (e) { /* conserva datos locales */ }
   }
 
+  function mergeMsgs(id, serverMsgs) {
+    const local = (Store.messages[id] || []).filter((m) => m.local);
+    const seen = {};
+    const out = [];
+    (serverMsgs || []).forEach((m) => {
+      const k = m.sender + '|' + m.text + '|' + m.time;
+      if (!seen[k]) { seen[k] = true; out.push(m); }
+    });
+    local.forEach((m) => {
+      const k = m.sender + '|' + m.text + '|' + m.time;
+      if (!seen[k]) { seen[k] = true; out.push(m); }
+    });
+    Store.messages[id] = out;
+    saveLocalMsgs();
+  }
+
   async function refreshMessages(id) {
     if (!Store.backend.ok) return;
-    try { Store.messages[id] = await Api.messages(id); }
-    catch (e) { /* conserva datos locales */ }
+    try {
+      const srv = await Api.messages(id);
+      mergeMsgs(id, srv);
+    } catch (e) { /* conserva datos locales */ }
   }
 
   async function toggleLike(postId) {
