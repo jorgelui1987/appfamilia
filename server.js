@@ -71,6 +71,33 @@ app.get('/api/users', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+var COUNTRIES = [
+  { code: '+52', name: 'Mexico', flag: '🇲🇽' },
+  { code: '+57', name: 'Colombia', flag: '🇨🇴' },
+  { code: '+34', name: 'Espana', flag: '🇪🇸' },
+  { code: '+1', name: 'EE.UU.', flag: '🇺🇸' },
+  { code: '+54', name: 'Argentina', flag: '🇦🇷' },
+  { code: '+56', name: 'Chile', flag: '🇨🇱' },
+  { code: '+51', name: 'Peru', flag: '🇵🇪' },
+  { code: '+58', name: 'Venezuela', flag: '🇻🇪' },
+  { code: '+502', name: 'Guatemala', flag: '🇬🇹' },
+  { code: '+503', name: 'El Salvador', flag: '🇸🇻' },
+  { code: '+504', name: 'Honduras', flag: '🇭🇳' },
+  { code: '+505', name: 'Nicaragua', flag: '🇳🇮' },
+  { code: '+506', name: 'Costa Rica', flag: '🇨🇷' },
+  { code: '+507', name: 'Panama', flag: '🇵🇦' },
+  { code: '+593', name: 'Ecuador', flag: '🇪🇨' },
+  { code: '+591', name: 'Bolivia', flag: '🇧🇴' },
+  { code: '+595', name: 'Paraguay', flag: '🇵🇾' },
+  { code: '+598', name: 'Uruguay', flag: '🇺🇾' },
+  { code: '+55', name: 'Brasil', flag: '🇧🇷' }
+];
+
+function normPhone(prefix, number) {
+  var digits = String(number || '').replace(/\D/g, '').slice(0, 15);
+  return { phone: prefix + ' ' + digits, digits: digits };
+}
+
 function avatarFor(name) {
   var initial = encodeURIComponent((name || 'F').trim().charAt(0).toUpperCase() || 'F');
   return 'https://ui-avatars.com/api/?name=' + initial + '&background=10b981&color=fff&size=150';
@@ -80,13 +107,14 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const b = req.body || {};
     const name = String(b.name || '').trim().slice(0, 80);
-    const email = String(b.email || '').trim().toLowerCase().slice(0, 120);
+    const prefix = String(b.prefix || '+52').trim().slice(0, 6);
+    const np = normPhone(prefix, b.phone);
     const pass = String(b.password || '');
     const family = String(b.family || 'Mi Familia').trim().slice(0, 80) || 'Mi Familia';
     const role = String(b.role || 'Familiar').trim().slice(0, 40) || 'Familiar';
     let avatar = String(b.avatar || '').slice(0, 8 * 1024 * 1024);
     if (name.length < 2) return res.status(400).json({ error: 'Nombre minimo 2 caracteres' });
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return res.status(400).json({ error: 'Email invalido' });
+    if (np.digits.length < 7) return res.status(400).json({ error: 'Numero de telefono invalido (minimo 7 digitos)' });
     if (pass.length < 6) return res.status(400).json({ error: 'Contrasena minimo 6 caracteres' });
     if (avatar && !/^data:image\/(jpeg|png|webp);base64,/.test(avatar) && !/^https?:\/\//.test(avatar)) {
       return res.status(400).json({ error: 'Foto de perfil invalida' });
@@ -98,12 +126,12 @@ app.post('/api/auth/register', async (req, res) => {
     let row;
     try {
       const r = await d.query(
-        'INSERT INTO users (name,role,family,avatar,email,pass_hash) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id,name,role,family,avatar,email',
-        [name, role, family, avatar, email, hash]
+        'INSERT INTO users (name,role,family,avatar,phone,pass_hash) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id,name,role,family,avatar,phone',
+        [name, role, family, avatar, np.phone, hash]
       );
       row = r.rows[0];
     } catch (e) {
-      if (e.code === '23505') return res.status(409).json({ error: 'Ese email ya esta registrado. Inicia sesion.' });
+      if (e.code === '23505') return res.status(409).json({ error: 'Ese numero ya esta registrado. Inicia sesion.' });
       throw e;
     }
     res.status(201).json({ user: row });
@@ -113,17 +141,18 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const b = req.body || {};
-    const email = String(b.email || '').trim().toLowerCase();
+    const prefix = String(b.prefix || '+52').trim().slice(0, 6);
+    const np = normPhone(prefix, b.phone);
     const pass = String(b.password || '');
-    if (!email || !pass) return res.status(400).json({ error: 'Email y contrasena requeridos' });
+    if (!np.digits || !pass) return res.status(400).json({ error: 'Telefono y contrasena requeridos' });
     const d = getDb();
-    const r = await d.query('SELECT * FROM users WHERE email=$1', [email]);
+    const r = await d.query('SELECT * FROM users WHERE phone=$1', [np.phone]);
     const u = r.rows[0];
     if (!u || !u.pass_hash) return res.status(401).json({ error: 'Credenciales invalidas' });
     const bcrypt = require('bcryptjs');
     const ok = await bcrypt.compare(pass, u.pass_hash);
     if (!ok) return res.status(401).json({ error: 'Credenciales invalidas' });
-    res.json({ user: { id: u.id, name: u.name, role: u.role, family: u.family, avatar: u.avatar, email: u.email } });
+    res.json({ user: { id: u.id, name: u.name, role: u.role, family: u.family, avatar: u.avatar, phone: u.phone } });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -134,7 +163,7 @@ app.put('/api/users/:id/avatar', async (req, res) => {
       return res.status(400).json({ error: 'Foto invalida. Usa JPG, PNG o WEBP.' });
     }
     const r = await getDb().query(
-      'UPDATE users SET avatar=$1 WHERE id=$2 RETURNING id,name,role,family,avatar,email',
+      'UPDATE users SET avatar=$1 WHERE id=$2 RETURNING id,name,role,family,avatar,phone',
       [avatar, Number(req.params.id)]
     );
     if (!r.rows[0]) return res.status(404).json({ error: 'Usuario no encontrado' });

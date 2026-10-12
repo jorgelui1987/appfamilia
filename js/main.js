@@ -119,6 +119,9 @@ var AppMain = (function (Store, App, AppChat, AppForms) {
     AppChat.renderChannels();
     AppChat.renderMessages();
     AppForms.renderFamilies();
+    Auth.syncBtn();
+    // Acceso obligatorio: primero telefono + contrasena, despues la app.
+    Auth.requireAuth();
     Backend.load().then(function () {
       Auth.restore();
       AppForms.updateUserUI();

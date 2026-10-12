@@ -1,8 +1,40 @@
 'use strict';
-/* MiFamilia — Auth: registro + login con sesion persistente. */
+/* MiFamilia — Auth: telefono + codigo pais, acceso obligatorio. */
 var Auth = (function (Store, App, AppChat) {
   var $ = App.$;
   var mode = 'login';
+  var avatarData = '';
+
+  var COUNTRIES = [
+    { code: '+52', label: '🇲🇽 +52' },
+    { code: '+57', label: '🇨🇴 +57' },
+    { code: '+34', label: '🇪🇸 +34' },
+    { code: '+1', label: '🇺🇸 +1' },
+    { code: '+54', label: '🇦🇷 +54' },
+    { code: '+56', label: '🇨🇱 +56' },
+    { code: '+51', label: '🇵🇪 +51' },
+    { code: '+58', label: '🇻🇪 +58' },
+    { code: '+502', label: '🇬🇹 +502' },
+    { code: '+503', label: '🇸🇻 +503' },
+    { code: '+504', label: '🇭🇳 +504' },
+    { code: '+505', label: '🇳🇮 +505' },
+    { code: '+506', label: '🇨🇷 +506' },
+    { code: '+507', label: '🇵🇦 +507' },
+    { code: '+593', label: '🇪🇨 +593' },
+    { code: '+591', label: '🇧🇴 +591' },
+    { code: '+595', label: '🇵🇾 +595' },
+    { code: '+598', label: '🇺🇾 +598' },
+    { code: '+55', label: '🇧🇷 +55' }
+  ];
+
+  function logged() {
+    try { return !!JSON.parse(localStorage.getItem('mf-session') || 'null'); } catch (e) { return false; }
+  }
+  function logout(silent) {
+    try { localStorage.removeItem('mf-session'); } catch (e) {}
+    open();
+    if (!silent) App.toast('Sesion cerrada');
+  }
 
   function setMode(m) {
     mode = m;
@@ -18,12 +50,6 @@ var Auth = (function (Store, App, AppChat) {
     $('auth-error').textContent = '';
   }
 
-  function open() {
-    setMode('login');
-    AppChat.openModal('auth-modal');
-    setTimeout(function () { $('auth-email').focus(); }, 100);
-  }
-
   function applyUser(u, msg) {
     var exists = Store.getUser(u.id);
     if (!exists) Store.users.push(u);
@@ -33,8 +59,6 @@ var Auth = (function (Store, App, AppChat) {
     AppChat.closeModal('auth-modal');
     App.toast(msg || ('Bienvenido, ' + u.name.split(' ')[0]));
   }
-
-  var avatarData = '';
 
   function compressAvatar(file) {
     return new Promise(function (resolve, reject) {
@@ -101,36 +125,54 @@ var Auth = (function (Store, App, AppChat) {
     });
   }
 
+  function fillPrefixes() {
+    var sel = $('auth-prefix');
+    if (!sel || sel.options.length) return;
+    COUNTRIES.forEach(function (c) {
+      var o = document.createElement('option');
+      o.value = c.code;
+      o.textContent = c.label;
+      sel.appendChild(o);
+    });
+    sel.value = '+52';
+  }
+
+  function open() {
+    fillPrefixes();
+    setMode(mode);
+    AppChat.openModal('auth-modal');
+    setTimeout(function () { $('auth-phone').focus(); }, 100);
+  }
+
+  function requireAuth() {
+    if (!logged()) open();
+  }
+
   function bind() {
     bindAvatar();
+    fillPrefixes();
     var btn = $('auth-btn');
     if (btn) btn.addEventListener('click', function () {
-      try {
-        var s = JSON.parse(localStorage.getItem('mf-session') || 'null');
-        if (s && s.id) {
-          localStorage.removeItem('mf-session');
-          Store.state.currentUserId = Store.users[0].id;
-          App.toast('Sesion cerrada (modo invitado)');
-          document.dispatchEvent(new CustomEvent('mf-user-changed'));
-          return;
-        }
-      } catch (e) {}
+      if (logged()) { logout(); document.dispatchEvent(new CustomEvent('mf-user-changed')); return; }
       open();
     });
     $('auth-tab-login').addEventListener('click', function () { setMode('login'); });
     $('auth-tab-register').addEventListener('click', function () { setMode('register'); });
+    // El modal de acceso es obligatorio: no se cierra con ESC ni clic fuera.
     $('auth-form').addEventListener('submit', function (e) {
       e.preventDefault();
       $('auth-error').textContent = '';
-      var email = $('auth-email').value.trim();
+      var prefix = $('auth-prefix').value;
+      var phone = $('auth-phone').value;
       var pass = $('auth-pass').value;
       var submit = $('auth-submit');
       submit.disabled = true;
-      function done() { submit.disabled = false; }
+      submit.textContent = 'Verificando...';
+      function done() { submit.disabled = false; submit.textContent = mode === 'register' ? 'Crear mi cuenta' : 'Entrar'; }
       if (mode === 'register') {
         var name = $('auth-name').value.trim();
         var family = $('auth-family').value.trim() || 'Mi Familia';
-        Api.register({ name: name, email: email, password: pass, family: family, role: 'Familiar', avatar: avatarData }).then(function (r) {
+        Api.register({ name: name, prefix: prefix, phone: phone, password: pass, family: family, role: 'Familiar', avatar: avatarData }).then(function (r) {
           done();
           avatarData = '';
           var pv = $('auth-avatar-preview');
@@ -144,7 +186,7 @@ var Auth = (function (Store, App, AppChat) {
           $('auth-error').textContent = cleanErr(err.message);
         });
       } else {
-        Api.login({ email: email, password: pass }).then(function (r) {
+        Api.login({ prefix: prefix, phone: phone, password: pass }).then(function (r) {
           done();
           applyUser(r.user, 'Que bueno verte, ' + r.user.name.split(' ')[0]);
           document.dispatchEvent(new CustomEvent('mf-user-changed'));
@@ -153,9 +195,6 @@ var Auth = (function (Store, App, AppChat) {
           $('auth-error').textContent = cleanErr(err.message);
         });
       }
-    });
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') AppChat.closeModal('auth-modal');
     });
   }
 
@@ -191,5 +230,5 @@ var Auth = (function (Store, App, AppChat) {
     btn.textContent = logged ? 'Salir' : 'Entrar / Registrarme';
   }
 
-  return { bind: bind, open: open, restore: restore, syncBtn: syncBtn };
+  return { bind: bind, open: open, restore: restore, syncBtn: syncBtn, requireAuth: requireAuth, logged: logged, logout: logout };
 })(Store, App, AppChat);
