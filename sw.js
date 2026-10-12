@@ -1,6 +1,6 @@
 'use strict';
 /* MiFamilia Service Worker: cachea la app para instalarla y usarla offline. */
-var CACHE = 'mifamilia-v10';
+var CACHE = 'mifamilia-v11';
 var CORE = [
   './',
   './index.html',
@@ -15,6 +15,7 @@ var CORE = [
   './js/chat.js',
   './js/forms.js',
   './js/auth.js',
+  './js/sound.js',
   './js/backend.js',
   './js/pwa.js',
   './js/main.js',

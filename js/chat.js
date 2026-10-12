@@ -171,6 +171,8 @@ var AppChat = (function (Store, App) {
           var last = msgs[msgs.length - 1];
           if (last && last.sender !== Store.currentUser().name) {
             App.toast('Nuevo mensaje de ' + last.sender.split(' ')[0]);
+            if (typeof Sound !== 'undefined') Sound.play();
+            try { if (navigator.vibrate) navigator.vibrate(80); } catch (e) {}
           }
         }
       });
@@ -211,6 +213,8 @@ var AppChat = (function (Store, App) {
               var last = msgs[msgs.length - 1];
               if (last && last.sender !== Store.currentUser().name) {
                 App.toast('Nuevo mensaje de ' + last.sender.split(' ')[0]);
+                if (typeof Sound !== 'undefined') Sound.play();
+                try { if (navigator.vibrate) navigator.vibrate(80); } catch (e) {}
               }
             }
           });

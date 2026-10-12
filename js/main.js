@@ -105,6 +105,7 @@ var AppMain = (function (Store, App, AppChat, AppForms) {
     AppForms.bindForms();
     Auth.bind();
     Auth.restore();
+    if (typeof Sound !== 'undefined') Sound.bind();
     Extras.initTheme();
     Extras.seedStories();
     ExtrasB.restoreReacts();

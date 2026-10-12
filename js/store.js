@@ -68,5 +68,19 @@ var Store = (function () {
   function getUser(id) { return users.find(function (u) { return u.id === id; }); }
   function currentUser() { return getUser(state.currentUserId); }
 
-  return { users: users, posts: posts, channels: channels, messages: messages, state: state, backend: { ok: false }, getUser: getUser, currentUser: currentUser };
+  function restoreLocalUsers() {
+    try {
+      var locals = JSON.parse(localStorage.getItem('mf-local-users') || '[]');
+      if (Array.isArray(locals)) {
+        locals.forEach(function (lu) {
+          if (!lu || !lu.id) return;
+          if (!getUser(lu.id)) {
+            users.push({ id: lu.id, name: lu.name, role: lu.role || 'Familiar', family: lu.family || 'Mi Familia', avatar: lu.avatar || '' });
+          }
+        });
+      }
+    } catch (e) {}
+  }
+
+  return { users: users, posts: posts, channels: channels, messages: messages, state: state, backend: { ok: false }, getUser: getUser, currentUser: currentUser, restoreLocalUsers: restoreLocalUsers };
 })();

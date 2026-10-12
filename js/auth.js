@@ -223,13 +223,19 @@ var Auth = (function (Store, App, AppChat) {
       submit.disabled = true;
       submit.textContent = 'Verificando...';
       function done() { submit.disabled = false; submit.textContent = mode === 'register' ? 'Crear mi cuenta' : 'Entrar'; }
+      function localIdFor(phoneFull) {
+        var h = 0;
+        var s = String(phoneFull || '');
+        for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) | 0; }
+        return 100000 + Math.abs(h % 899999999);
+      }
       function localRegister(name, family, prefix, phone, pass, avatar) {
         var users = [];
         try { users = JSON.parse(localStorage.getItem('mf-local-users') || '[]'); } catch (e) { users = []; }
         var full = prefix + ' ' + String(phone).replace(/\D/g, '');
         var dup = users.filter(function (x) { return x.phone === full; })[0];
         if (dup) { $('auth-error').textContent = 'Ese numero ya esta registrado en este dispositivo. Inicia sesion.'; done(); return; }
-        var u = { id: Date.now(), name: name, role: 'Familiar', family: family || 'Mi Familia', avatar: avatar || '', phone: full, pass: btoa(unescape(encodeURIComponent(pass))) };
+        var u = { id: localIdFor(full), name: name, role: 'Familiar', family: family || 'Mi Familia', avatar: avatar || '', phone: full, pass: btoa(unescape(encodeURIComponent(pass))) };
         users.push(u);
         try { localStorage.setItem('mf-local-users', JSON.stringify(users)); } catch (e) {}
         avatarData = '';
@@ -300,6 +306,9 @@ var Auth = (function (Store, App, AppChat) {
   }
 
   function restore() {
+    try {
+      if (Store.restoreLocalUsers) Store.restoreLocalUsers();
+    } catch (e) {}
     try {
       var s = JSON.parse(localStorage.getItem('mf-session') || 'null');
       if (s && s.id) {
