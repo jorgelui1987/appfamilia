@@ -169,6 +169,31 @@ var Auth = (function (Store, App, AppChat) {
       submit.disabled = true;
       submit.textContent = 'Verificando...';
       function done() { submit.disabled = false; submit.textContent = mode === 'register' ? 'Crear mi cuenta' : 'Entrar'; }
+      function localRegister(name, family, prefix, phone, pass, avatar) {
+        var users = [];
+        try { users = JSON.parse(localStorage.getItem('mf-local-users') || '[]'); } catch (e) { users = []; }
+        var full = prefix + ' ' + String(phone).replace(/\D/g, '');
+        var dup = users.filter(function (x) { return x.phone === full; })[0];
+        if (dup) { $('auth-error').textContent = 'Ese numero ya esta registrado en este dispositivo. Inicia sesion.'; done(); return; }
+        var u = { id: Date.now(), name: name, role: 'Familiar', family: family || 'Mi Familia', avatar: avatar || '', phone: full, pass: btoa(unescape(encodeURIComponent(pass))) };
+        users.push(u);
+        try { localStorage.setItem('mf-local-users', JSON.stringify(users)); } catch (e) {}
+        avatarData = '';
+        applyUser({ id: u.id, name: u.name, role: u.role, family: u.family, avatar: u.avatar, phone: u.phone }, 'Cuenta creada en este dispositivo. Bienvenido, ' + name.split(' ')[0]);
+        document.dispatchEvent(new CustomEvent('mf-user-changed'));
+        done();
+      }
+      function localLogin(prefix, phone, pass) {
+        var users = [];
+        try { users = JSON.parse(localStorage.getItem('mf-local-users') || '[]'); } catch (e) { users = []; }
+        var full = prefix + ' ' + String(phone).replace(/\D/g, '');
+        var hash = btoa(unescape(encodeURIComponent(pass)));
+        var u = users.filter(function (x) { return x.phone === full && x.pass === hash; })[0];
+        if (!u) { $('auth-error').textContent = 'No existe esa cuenta en este dispositivo. Registrate primero.'; done(); return; }
+        applyUser({ id: u.id, name: u.name, role: u.role, family: u.family, avatar: u.avatar, phone: u.phone }, 'Que bueno verte, ' + u.name.split(' ')[0]);
+        document.dispatchEvent(new CustomEvent('mf-user-changed'));
+        done();
+      }
       if (mode === 'register') {
         var name = $('auth-name').value.trim();
         var family = $('auth-family').value.trim() || 'Mi Familia';
@@ -182,6 +207,10 @@ var Auth = (function (Store, App, AppChat) {
           applyUser(r.user, 'Cuenta creada. Bienvenido, ' + r.user.name.split(' ')[0]);
           document.dispatchEvent(new CustomEvent('mf-user-changed'));
         }).catch(function (err) {
+          if (/ECONNREFUSED|500|Failed to fetch|NetworkError|Load failed/i.test(String(err.message))) {
+            localRegister(name, family, prefix, phone, pass, avatarData);
+            return;
+          }
           done();
           $('auth-error').textContent = cleanErr(err.message);
         });
@@ -191,6 +220,10 @@ var Auth = (function (Store, App, AppChat) {
           applyUser(r.user, 'Que bueno verte, ' + r.user.name.split(' ')[0]);
           document.dispatchEvent(new CustomEvent('mf-user-changed'));
         }).catch(function (err) {
+          if (/ECONNREFUSED|500|Failed to fetch|NetworkError|Load failed/i.test(String(err.message))) {
+            localLogin(prefix, phone, pass);
+            return;
+          }
           done();
           $('auth-error').textContent = cleanErr(err.message);
         });
