@@ -146,7 +146,12 @@ app.post('/api/channels/:id/messages', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname), {
+  setHeaders: function (res, filePath) {
+    if (filePath.endsWith('sw.js')) res.setHeader('Service-Worker-Allowed', '/');
+    if (filePath.endsWith('.webmanifest')) res.setHeader('Content-Type', 'application/manifest+json');
+  }
+}));
 
 app.use((req, res, next) => {
   if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'not found' });
