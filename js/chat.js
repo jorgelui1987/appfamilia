@@ -152,6 +152,68 @@ var AppChat = (function (Store, App) {
     return msgs.length + '|' + (msgs.length ? String(msgs[msgs.length - 1].text).slice(0, 40) : '');
   }
 
+  function notifyIncoming(channelId, text) {
+    try {
+      var ch = null;
+      Store.channels.forEach(function (c) { if (String(c.id) === String(channelId)) ch = c; });
+      var name = ch ? ch.name : 'Chat';
+      App.toast('Nuevo mensaje en ' + name.split(' ').slice(0, 2).join(' ') + (text ? ': ' + String(text).slice(0, 60) : ''));
+    } catch (e) {
+      App.toast('Tienes un mensaje nuevo');
+    }
+    try { if (typeof Sound !== 'undefined') Sound.play(); } catch (e) {}
+    try { if (navigator.vibrate) navigator.vibrate([80, 40, 80]); } catch (e) {}
+    try {
+      var dot = $('mob-chat-dot');
+      if (dot) dot.classList.remove('hidden');
+    } catch (e) {}
+  }
+
+  var watchTimer = null;
+  var watchState = {};
+
+  function snapshotAll() {
+    var snap = {};
+    Store.channels.forEach(function (c) {
+      var msgs = Store.messages[c.id] || [];
+      snap[c.id] = msgs.length + '|' + (msgs.length ? String(msgs[msgs.length - 1].text).slice(0, 40) : '');
+    });
+    return snap;
+  }
+
+  function startWatcher() {
+    if (watchTimer) return;
+    watchState = snapshotAll();
+    watchTimer = setInterval(function () {
+      if (!Store.backend.ok) return;
+      if (typeof document !== 'undefined' && document.hidden) return;
+      var ids = Store.channels.map(function (c) { return c.id; });
+      (function next(i) {
+        if (i >= ids.length) return;
+        var id = ids[i];
+        Backend.refreshMessages(id).then(function () {
+          var now = fingerprint(id);
+          if (watchState[id] !== undefined && watchState[id] !== now) {
+            var inChat = false;
+            try {
+              var view = $('tab-chat-view');
+              inChat = view && !view.classList.contains('hidden') && String(Store.state.activeChatId) === String(id);
+            } catch (e) {}
+            if (!inChat) {
+              var msgs = Store.messages[id] || [];
+              var last = msgs[msgs.length - 1];
+              if (last && last.sender !== Store.currentUser().name) {
+                notifyIncoming(id, last.text);
+              }
+            }
+          }
+          watchState[id] = now;
+          next(i + 1);
+        }).catch(function () { next(i + 1); });
+      })(0);
+    }, 8000);
+  }
+
   function startPolling() {
     stopPolling();
     lastCount = fingerprint(Store.state.activeChatId);
@@ -295,6 +357,15 @@ var AppChat = (function (Store, App) {
     restoreDMs();
     startPolling();
     startLive();
+    startWatcher();
+    // Al entrar al Chat se limpia el aviso pendiente.
+    document.addEventListener('click', function (e) {
+      var tab = e.target.closest && e.target.closest('[data-tab="chat"]');
+      if (tab) {
+        var dot = $('mob-chat-dot');
+        if (dot) dot.classList.add('hidden');
+      }
+    });
     $('chat-photo-btn').addEventListener('click', function () {
       App.toast('Adjunta una foto desde el muro con Compartir recuerdo');
     });
