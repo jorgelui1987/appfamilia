@@ -85,17 +85,45 @@ var AppForms = (function (Store, App, AppChat) {
         $('upload-error').textContent = 'Formato no permitido. Usa JPG, PNG o WEBP.';
         return;
       }
-      if (file.size > 5 * 1024 * 1024) {
-        $('upload-error').textContent = 'La imagen supera 5MB.';
+      if (file.size > 8 * 1024 * 1024) {
+        $('upload-error').textContent = 'La imagen supera 8MB.';
         return;
       }
-      var reader = new FileReader();
-      reader.onload = function (ev) {
-        $('image-preview').src = ev.target.result;
+      compressImage(file, 1280, 0.82).then(function (dataUrl) {
+        $('image-preview').src = dataUrl;
         $('image-preview-container').classList.remove('hidden');
-      };
-      reader.readAsDataURL(file);
+      }).catch(function () {
+        var reader = new FileReader();
+        reader.onload = function (ev) {
+          $('image-preview').src = ev.target.result;
+          $('image-preview-container').classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+      });
     });
+    function compressImage(file, maxSide, quality) {
+      return new Promise(function (resolve, reject) {
+        var url = URL.createObjectURL(file);
+        var img = new Image();
+        img.onload = function () {
+          try {
+            var w = img.naturalWidth || 1;
+            var h = img.naturalHeight || 1;
+            var scale = Math.min(1, maxSide / Math.max(w, h));
+            var cw = Math.round(w * scale);
+            var ch = Math.round(h * scale);
+            var canvas = document.createElement('canvas');
+            canvas.width = cw;
+            canvas.height = ch;
+            canvas.getContext('2d').drawImage(img, 0, 0, cw, ch);
+            URL.revokeObjectURL(url);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          } catch (e) { URL.revokeObjectURL(url); reject(e); }
+        };
+        img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('img')); };
+        img.src = url;
+      });
+    }
     $('upload-form').addEventListener('submit', function (e) {
       e.preventDefault();
       var caption = $('modal-caption').value.trim();

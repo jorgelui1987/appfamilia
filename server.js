@@ -10,7 +10,8 @@ const PORT = Number(process.env.PORT || 3000);
 const HOST = '0.0.0.0';
 
 app.use(cors());
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ limit: '15mb', extended: true }));
 
 let db = null;
 function getDb() {
@@ -18,8 +19,13 @@ function getDb() {
   return db;
 }
 
-function esc(s) {
-  return String(s == null ? '' : s).slice(0, 2000);
+function esc(s, max) {
+  return String(s == null ? '' : s).slice(0, max || 2000);
+}
+function escUrl(s) {
+  var v = String(s == null ? '' : s);
+  if (/^data:image\/(jpeg|png|webp);base64,/.test(v)) return v.slice(0, 8 * 1024 * 1024);
+  return v.slice(0, 2000);
 }
 
 async function initDb() {
@@ -144,7 +150,7 @@ app.post('/api/posts', async (req, res) => {
     if (!u) return res.status(400).json({ error: 'usuario invalido' });
     const r = await d.query(
       'INSERT INTO posts (user_id,user_name,user_family,user_avatar,image_url,caption,tag) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
-      [u.id, u.name, u.family, u.avatar, esc(b.imageUrl) || 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=800&q=80', esc(b.caption).slice(0, 500), esc(b.tag) || 'Cotidiano']
+      [u.id, u.name, u.family, u.avatar, escUrl(b.imageUrl) || 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=800&q=80', esc(b.caption, 500), esc(b.tag) || 'Cotidiano']
     );
     res.status(201).json(r.rows[0]);
   } catch (e) { res.status(500).json({ error: e.message }); }
