@@ -70,10 +70,16 @@ var Backend = (function (Store) {
         posts.map(normalizePost).forEach((p) => Store.posts.push(p));
       }
       if (channels && channels.length) {
+        const keepDM = Store.channels.filter((c) => c.dm);
         Store.channels.length = 0;
         channels.forEach((c) => {
           if (String(c.id).startsWith('dm-')) c.dm = true;
           Store.channels.push(c);
+        });
+        // Repone los DM locales que el servidor aun no conoce.
+        keepDM.forEach((dm) => {
+          const exists = Store.channels.some((c) => String(c.id) === String(dm.id));
+          if (!exists) Store.channels.push(dm);
         });
         const ids = channels.map((c) => c.id);
         if (ids.indexOf(Store.state.activeChatId) === -1) Store.state.activeChatId = ids[0];
@@ -90,6 +96,7 @@ var Backend = (function (Store) {
       setSyncBadge('local');
     }
     loadLocalPosts();
+    if (typeof AppChat !== 'undefined' && AppChat.restoreDMs) AppChat.restoreDMs();
     loadLocalMsgs();
   }
 
