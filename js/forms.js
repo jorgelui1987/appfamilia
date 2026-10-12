@@ -85,8 +85,8 @@ var AppForms = (function (Store, App, AppChat) {
         $('upload-error').textContent = 'Formato no permitido. Usa JPG, PNG o WEBP.';
         return;
       }
-      if (file.size > 8 * 1024 * 1024) {
-        $('upload-error').textContent = 'La imagen supera 8MB.';
+      if (file.size > 50 * 1024 * 1024) {
+        $('upload-error').textContent = 'La imagen supera 50MB.';
         return;
       }
       compressImage(file, 1280, 0.82).then(function (dataUrl) {
