@@ -107,6 +107,45 @@ var AppChat = (function (Store, App) {
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
   }
 
+  var sseOn = false;
+  function startLive() {
+    if (sseOn) return;
+    if (typeof EventSource === 'undefined') return;
+    try {
+      var src = new EventSource('/api/stream');
+      sseOn = true;
+      src.onmessage = function (ev) {
+        try {
+          var data = JSON.parse(ev.data || '{}');
+          var view = $('tab-chat-view');
+          if (!view || view.classList.contains('hidden')) return;
+          if (!Store.backend.ok) return;
+          var id = data.channel || Store.state.activeChatId;
+          Backend.refreshMessages(id).then(function () {
+            // Punto verde en la barra si el mensaje es de otro canal.
+            var dot = $('mob-chat-dot');
+            if (dot) dot.classList.toggle('hidden', String(id) === String(Store.state.activeChatId));
+            if (String(id) !== String(Store.state.activeChatId)) {
+              renderChannels();
+              return;
+            }
+            var now = fingerprint(id);
+            if (now !== lastCount) {
+              lastCount = now;
+              renderMessages();
+              var msgs = Store.messages[id] || [];
+              var last = msgs[msgs.length - 1];
+              if (last && last.sender !== Store.currentUser().name) {
+                App.toast('Nuevo mensaje de ' + last.sender.split(' ')[0]);
+              }
+            }
+          });
+        } catch (e) {}
+      };
+      src.onerror = function () { sseOn = false; };
+    } catch (e) { sseOn = false; }
+  }
+
   function showConvOnMobile() {
     if (window.innerWidth >= 640) return;
     var list = $('chat-list-pane');
@@ -176,15 +215,7 @@ var AppChat = (function (Store, App) {
     var back = $('chat-back-btn');
     if (back) back.addEventListener('click', showListOnMobile);
     startPolling();
-    var quick = $('quick-chat-btn');
-    if (quick) quick.addEventListener('click', function () {
-      App.switchTab('chat');
-      selectChannel('gen');
-      setTimeout(function () {
-        var input = $('chat-input-text');
-        if (input && window.innerWidth >= 640) input.focus();
-      }, 300);
-    });
+    startLive();
     $('chat-photo-btn').addEventListener('click', function () {
       App.toast('Adjunta una foto desde el muro con Compartir recuerdo');
     });

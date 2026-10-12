@@ -285,8 +285,35 @@ app.post('/api/channels/:id/messages', async (req, res) => {
     const b = req.body || {};
     if (!b.text || !String(b.text).trim()) return res.status(400).json({ error: 'texto requerido' });
     await getDb().query('INSERT INTO messages (channel_id,sender,text) VALUES ($1,$2,$3)', [req.params.id, esc(b.sender).slice(0, 120) || 'Familiar', esc(b.text).slice(0, 500)]);
+    notifyChannel(req.params.id);
     res.status(201).json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Tiempo real simple con SSE: avisa a la PWA cuando hay mensaje nuevo.
+const sseClients = [];
+function notifyChannel(channelId) {
+  const payload = 'data: ' + JSON.stringify({ channel: channelId, at: Date.now() }) + '\n\n';
+  for (let i = sseClients.length - 1; i >= 0; i--) {
+    try { sseClients[i].res.write(payload); }
+    catch (e) { sseClients.splice(i, 1); }
+  }
+}
+
+app.get('/api/stream', (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no'
+  });
+  res.write('retry: 5000\n\n');
+  const client = { res };
+  sseClients.push(client);
+  req.on('close', () => {
+    const i = sseClients.indexOf(client);
+    if (i > -1) sseClients.splice(i, 1);
+  });
 });
 
 app.use(express.static(path.join(__dirname), {
