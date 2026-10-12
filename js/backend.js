@@ -12,6 +12,48 @@ var Backend = (function (Store) {
     return p;
   }
 
+  function setSyncBadge(mode) {
+    var badge = document.getElementById('sync-badge');
+    var dot = document.getElementById('sync-dot');
+    var txt = document.getElementById('sync-text');
+    if (!badge || !dot || !txt) return;
+    if (mode === 'cloud') {
+      txt.textContent = 'Nube';
+      dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+      badge.className = 'hidden sm:inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-300';
+      badge.title = 'Conectado a la base de datos: todo se comparte entre PC y celular';
+    } else {
+      txt.textContent = 'Local';
+      dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+      badge.className = 'hidden sm:inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-300';
+      badge.title = 'Sin base de datos: solo ves lo de este dispositivo. Revisa Postgres en Dokploy.';
+    }
+  }
+
+  async function syncLocalPosts() {
+    // Sube los posts creados en modo local cuando el servidor vuelve.
+    let pend = [];
+    try { pend = Store.posts.filter((p) => p.local); } catch (e) { pend = []; }
+    if (!pend.length) return;
+    let ok = 0;
+    for (const p of pend) {
+      try {
+        await Api.createPost({ userId: p.userId, caption: p.caption, tag: p.tag, imageUrl: p.imageUrl });
+        ok++;
+        Store.posts = Store.posts.filter((x) => x !== p);
+      } catch (e) { break; }
+    }
+    if (ok > 0) {
+      try {
+        const posts = (await Api.posts()).map(normalizePost);
+        Store.posts.length = 0;
+        posts.forEach((x) => Store.posts.push(x));
+        loadLocalPosts();
+      } catch (e) {}
+      App.toast('Sincronizados ' + ok + ' recuerdos a la nube');
+    }
+  }
+
   async function load() {
     try {
       await Api.health();
@@ -38,8 +80,11 @@ var Backend = (function (Store) {
         }
       }
       Store.backend.ok = true;
+      setSyncBadge('cloud');
+      await syncLocalPosts();
     } catch (e) {
       Store.backend.ok = false;
+      setSyncBadge('local');
     }
     loadLocalPosts();
   }
