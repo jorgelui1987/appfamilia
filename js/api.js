@@ -23,6 +23,8 @@ var Api = (function () {
     like: (id, userId) => req('POST', '/api/posts/' + id + '/like', { userId }),
     channels: () => req('GET', '/api/channels'),
     messages: (id) => req('GET', '/api/channels/' + id + '/messages'),
-    sendMessage: (id, d) => req('POST', '/api/channels/' + id + '/messages', d)
+    sendMessage: (id, d) => req('POST', '/api/channels/' + id + '/messages', d),
+    register: (d) => req('POST', '/api/auth/register', d),
+    login: (d) => req('POST', '/api/auth/login', d)
   };
 })();

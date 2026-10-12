@@ -103,6 +103,8 @@ var AppMain = (function (Store, App, AppChat, AppForms) {
     bindGlobal();
     AppChat.bindChat();
     AppForms.bindForms();
+    Auth.bind();
+    Auth.restore();
     Extras.initTheme();
     Extras.seedStories();
     ExtrasB.restoreReacts();
@@ -118,6 +120,7 @@ var AppMain = (function (Store, App, AppChat, AppForms) {
     AppChat.renderMessages();
     AppForms.renderFamilies();
     Backend.load().then(function () {
+      Auth.restore();
       AppForms.updateUserUI();
       App.renderPosts();
       Extras.renderStories();
@@ -126,6 +129,13 @@ var AppMain = (function (Store, App, AppChat, AppForms) {
       AppChat.renderChannels();
       AppChat.renderMessages();
       AppForms.renderFamilies();
+      Auth.syncBtn();
+    });
+    document.addEventListener('mf-user-changed', function () {
+      AppForms.updateUserUI();
+      App.renderPosts();
+      AppForms.renderFamilies();
+      Auth.syncBtn();
     });
   }
   return { init: init };

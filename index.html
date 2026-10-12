@@ -28,6 +28,7 @@
 <script src="js/extras3.js" defer></script>
 <script src="js/chat.js" defer></script>
 <script src="js/forms.js" defer></script>
+<script src="js/auth.js" defer></script>
 <script src="js/backend.js" defer></script>
 <script src="js/pwa.js" defer></script>
 <script src="js/main.js" defer></script>
@@ -55,6 +56,7 @@
 </div>
 <div class="flex items-center gap-3">
 <button type="button" id="theme-btn" class="p-2 bg-slate-800 rounded-full border border-slate-700 text-sm" aria-label="Cambiar modo oscuro/claro"><i class="fa-solid fa-moon"></i></button>
+<button type="button" id="auth-btn" class="hidden sm:block text-xs font-bold px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white">Entrar / Registrarme</button>
 <div class="text-right hidden sm:block"><p id="current-user-name" class="text-sm font-semibold leading-tight">Papa (Carlos)</p><p id="current-user-family" class="text-xs text-emerald-400">Familia Castro</p></div>
 <button type="button" id="user-switch-btn" class="p-1 bg-slate-800 rounded-full border border-slate-700" aria-label="Cambiar de familiar" aria-haspopup="dialog"><img id="current-user-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" class="w-9 h-9 rounded-full object-cover" alt="Foto de perfil actual" /></button>
 </div>
@@ -199,6 +201,38 @@
 <p class="text-xs text-slate-500 mb-4">Elige que familiar quieres ser:</p>
 <div id="users-selector-list" class="space-y-2"></div>
 <div class="mt-4 pt-3 border-t border-slate-100 text-right"><button type="button" data-close-user class="px-4 py-2 bg-slate-100 rounded-xl text-xs font-semibold">Cerrar</button></div>
+</div>
+</div>
+<!-- AUTH MODAL -->
+<div id="auth-modal" class="modal fixed inset-0 bg-slate-900/60 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+<div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl">
+<h3 id="auth-title" class="font-bold text-lg mb-1">Entrar a MiFamilia</h3>
+<p class="text-xs text-slate-500 mb-4">Registrate con tu email o inicia sesion si ya tienes cuenta.</p>
+<div class="flex gap-2 mb-4 text-xs font-bold" role="tablist" aria-label="Modo de acceso">
+<button type="button" id="auth-tab-login" class="flex-1 py-2 rounded-xl bg-emerald-600 text-white" role="tab" aria-selected="true">Iniciar sesion</button>
+<button type="button" id="auth-tab-register" class="flex-1 py-2 rounded-xl bg-slate-100 text-slate-600" role="tab" aria-selected="false">Registrarme</button>
+</div>
+<form id="auth-form" class="space-y-3">
+<div id="auth-name-wrap" class="hidden">
+<label class="block text-xs font-semibold mb-1" for="auth-name">Nombre y apellido</label>
+<input id="auth-name" type="text" placeholder="Ej: Ana Castro" maxlength="80" autocomplete="name" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs" />
+</div>
+<div id="auth-family-wrap" class="hidden">
+<label class="block text-xs font-semibold mb-1" for="auth-family">Familia</label>
+<input id="auth-family" type="text" placeholder="Ej: Familia Castro" maxlength="80" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs" />
+</div>
+<div>
+<label class="block text-xs font-semibold mb-1" for="auth-email">Email</label>
+<input id="auth-email" type="email" placeholder="tucorreo@email.com" required autocomplete="email" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs" />
+</div>
+<div>
+<label class="block text-xs font-semibold mb-1" for="auth-pass">Contrasena</label>
+<input id="auth-pass" type="password" placeholder="Minimo 6 caracteres" required minlength="6" autocomplete="current-password" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs" />
+</div>
+<p id="auth-error" class="text-xs text-rose-600" aria-live="polite"></p>
+<button type="submit" id="auth-submit" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold">Entrar</button>
+<p class="text-[11px] text-slate-400 text-center">Al entrar aceptas compartir recuerdos solo con tu familia.</p>
+</form>
 </div>
 </div>
 <!-- STORY MODAL -->

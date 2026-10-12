@@ -62,7 +62,59 @@ app.get('/api/health', async (req, res) => {
 
 app.get('/api/users', async (req, res) => {
   try {
-    res.json((await getDb().query('SELECT * FROM users ORDER BY id')).rows);
+    const rows = (await getDb().query('SELECT id,name,role,family,avatar FROM users ORDER BY id')).rows;
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+function avatarFor(name) {
+  var initial = encodeURIComponent((name || 'F').trim().charAt(0).toUpperCase() || 'F');
+  return 'https://ui-avatars.com/api/?name=' + initial + '&background=10b981&color=fff&size=150';
+}
+
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const b = req.body || {};
+    const name = String(b.name || '').trim().slice(0, 80);
+    const email = String(b.email || '').trim().toLowerCase().slice(0, 120);
+    const pass = String(b.password || '');
+    const family = String(b.family || 'Mi Familia').trim().slice(0, 80) || 'Mi Familia';
+    const role = String(b.role || 'Familiar').trim().slice(0, 40) || 'Familiar';
+    if (name.length < 2) return res.status(400).json({ error: 'Nombre minimo 2 caracteres' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return res.status(400).json({ error: 'Email invalido' });
+    if (pass.length < 6) return res.status(400).json({ error: 'Contrasena minimo 6 caracteres' });
+    const bcrypt = require('bcryptjs');
+    const hash = await bcrypt.hash(pass, 10);
+    const d = getDb();
+    let row;
+    try {
+      const r = await d.query(
+        'INSERT INTO users (name,role,family,avatar,email,pass_hash) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id,name,role,family,avatar,email',
+        [name, role, family, avatarFor(name), email, hash]
+      );
+      row = r.rows[0];
+    } catch (e) {
+      if (e.code === '23505') return res.status(409).json({ error: 'Ese email ya esta registrado. Inicia sesion.' });
+      throw e;
+    }
+    res.status(201).json({ user: row });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const b = req.body || {};
+    const email = String(b.email || '').trim().toLowerCase();
+    const pass = String(b.password || '');
+    if (!email || !pass) return res.status(400).json({ error: 'Email y contrasena requeridos' });
+    const d = getDb();
+    const r = await d.query('SELECT * FROM users WHERE email=$1', [email]);
+    const u = r.rows[0];
+    if (!u || !u.pass_hash) return res.status(401).json({ error: 'Credenciales invalidas' });
+    const bcrypt = require('bcryptjs');
+    const ok = await bcrypt.compare(pass, u.pass_hash);
+    if (!ok) return res.status(401).json({ error: 'Credenciales invalidas' });
+    res.json({ user: { id: u.id, name: u.name, role: u.role, family: u.family, avatar: u.avatar, email: u.email } });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
