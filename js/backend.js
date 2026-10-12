@@ -20,12 +20,12 @@ var Backend = (function (Store) {
     if (mode === 'cloud') {
       txt.textContent = 'Nube';
       dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
-      badge.className = 'hidden sm:inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-300';
+      badge.className = 'hidden sm:inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-300';
       badge.title = 'Conectado a la base de datos: todo se comparte entre PC y celular';
     } else {
       txt.textContent = 'Local';
       dot.className = 'w-2 h-2 rounded-full bg-amber-400';
-      badge.className = 'hidden sm:inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-300';
+      badge.className = 'hidden sm:inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-300';
       badge.title = 'Sin base de datos: solo ves lo de este dispositivo. Revisa Postgres en Dokploy.';
     }
   }

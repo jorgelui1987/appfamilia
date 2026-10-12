@@ -38,11 +38,11 @@
 <body class="h-full flex flex-col font-sans text-slate-800 antialiased">
 <a class="skip-link" href="#contenido">Saltar al contenido</a>
 <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-lg border-b border-slate-800">
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-<div class="flex items-center justify-between h-16">
-<div class="flex items-center gap-3">
-<div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center" aria-hidden="true"><i class="fa-solid fa-house-chimney-window"></i></div>
-<div><h1 class="font-bold text-lg leading-tight">MiFamilia <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">Privado</span></h1><p class="text-xs text-slate-400">Portal y Galeria Compartida</p></div>
+<div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+<div class="flex items-center justify-between gap-1.5 sm:gap-2 py-2">
+<div class="flex items-center gap-2 min-w-0 flex-1">
+<div class="w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center" aria-hidden="true"><i class="fa-solid fa-house-chimney-window text-xs sm:text-sm"></i></div>
+<div class="min-w-0 flex-1"><h1 class="font-bold text-[15px] sm:text-base leading-tight flex items-center gap-1.5 min-w-0"><span class="truncate">MiFamilia</span> <span class="text-[9px] sm:text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full border border-emerald-500/30 whitespace-nowrap shrink-0">Privado</span></h1><p class="text-[10px] text-slate-400 leading-tight truncate whitespace-nowrap overflow-hidden text-ellipsis">Portal y Galeria Compartida</p></div>
 </div>
 <nav class="hidden md:flex space-x-1" aria-label="Navegacion principal">
 <button type="button" data-tab="feed" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white">Muro de Fotos</button>
@@ -56,13 +56,13 @@
 <input id="global-search" type="text" placeholder="Buscar fotos o familia..." autocomplete="off" class="w-56 px-4 py-2 bg-slate-800 border border-slate-700 rounded-full text-xs text-white placeholder-slate-400" />
 <div id="search-results" class="hidden absolute top-11 left-0 w-72 bg-white rounded-xl shadow-xl border border-slate-200 p-2 max-h-80 overflow-y-auto custom-scrollbar"></div>
 </div>
-<div class="flex items-center gap-3">
-<button type="button" id="theme-btn" class="p-2 bg-slate-800 rounded-full border border-slate-700 text-sm" aria-label="Cambiar modo oscuro/claro"><i class="fa-solid fa-moon"></i></button>
-<button type="button" id="sound-btn" class="p-2 bg-slate-800 rounded-full border border-slate-700 text-sm" aria-label="Activar o silenciar avisos de chat" aria-pressed="true"><i class="fa-solid fa-bell"></i></button>
-<span id="sync-badge" class="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 rounded-full border" title="Estado de sincronizacion"><span id="sync-dot" class="w-2 h-2 rounded-full bg-slate-400"></span><span id="sync-text">Local</span></span>
-<button type="button" id="auth-btn" class="text-xs font-bold px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white">Entrar / Registrarme</button>
+<div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
+<button type="button" id="theme-btn" class="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center bg-slate-800 rounded-full border border-slate-700 text-[11px] sm:text-xs shrink-0" aria-label="Cambiar modo oscuro/claro"><i class="fa-solid fa-moon"></i></button>
+<button type="button" id="sound-btn" class="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center bg-slate-800 rounded-full border border-slate-700 text-[11px] sm:text-xs shrink-0" aria-label="Activar o silenciar avisos de chat" aria-pressed="true"><i class="fa-solid fa-bell"></i></button>
+<span id="sync-badge" class="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1.5 rounded-full border" title="Estado de sincronizacion"><span id="sync-dot" class="w-2 h-2 rounded-full bg-slate-400"></span><span id="sync-text">Local</span></span>
+<button type="button" id="auth-btn" class="text-[11px] font-bold px-2 sm:px-2.5 py-1.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white whitespace-nowrap shrink-0">Entrar / Registrarme</button>
 <div class="text-right hidden sm:block"><p id="current-user-name" class="text-sm font-semibold leading-tight">Papa (Carlos)</p><p id="current-user-family" class="text-xs text-emerald-400">Familia Castro</p></div>
-<button type="button" id="user-switch-btn" class="p-1 bg-slate-800 rounded-full border border-slate-700" aria-label="Cambiar de familiar" aria-haspopup="dialog"><img id="current-user-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" class="w-9 h-9 rounded-full object-cover" alt="Foto de perfil actual" /></button>
+<button type="button" id="user-switch-btn" class="p-0.5 bg-slate-800 rounded-full border border-slate-700 shrink-0" aria-label="Cambiar de familiar" aria-haspopup="dialog"><img id="current-user-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" class="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover aspect-square" alt="Foto de perfil actual" /></button>
 </div>
 </div>
 </div>
