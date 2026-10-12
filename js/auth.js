@@ -86,15 +86,17 @@ var Auth = (function (Store, App, AppChat) {
   }
 
   function cleanErr(msg) {
+    var m = String(msg == null ? '' : msg);
+    var j = null;
     try {
-      var m = String(msg).match(/\{.*\}/);
-      if (m) {
-        var j = JSON.parse(m[0]);
-        if (j.error) return j.error;
-      }
-    } catch (e) {}
-    if (/Failed to fetch|NetworkError/i.test(msg)) return 'Sin conexion con el servidor. Revisa tu internet o Dokploy.';
-    return 'No se pudo completar. Intenta de nuevo.';
+      var start = m.indexOf('{');
+      var end = m.lastIndexOf('}');
+      if (start > -1 && end > start) j = JSON.parse(m.slice(start, end + 1));
+    } catch (e) { j = null; }
+    if (j && j.error) return j.error;
+    if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'Sin conexion con el servidor. Revisa tu internet o haz Redeploy en Dokploy.';
+    if (/404/.test(m)) return 'Servidor desactualizado (404). Haz Redeploy en Dokploy para subir el registro.';
+    return 'No se pudo completar: ' + m.slice(0, 160);
   }
 
   function restore() {
