@@ -55,14 +55,30 @@ var Sound = (function (App) {
     var btn = $('sound-btn');
     if (btn) btn.addEventListener('click', function () {
       setEnabled(!enabled());
-      if (enabled()) play();
-      else App.toast('Avisos en silencio');
+      if (enabled()) {
+        play();
+        App.toast('Sonido activado');
+      } else {
+        App.toast('Avisos en silencio');
+      }
     });
-    // iOS exige gesto antes de audio: desbloquea al primer toque.
-    document.addEventListener('pointerdown', function unlock() {
-      ensureCtx();
-      document.removeEventListener('pointerdown', unlock);
-    });
+    // Desbloquea audio en movil: iOS/Android exigen gesto antes de sonar.
+    var unlock = function () {
+      try {
+        var ac = ensureCtx();
+        if (ac) {
+          var o = ac.createOscillator();
+          var g = ac.createGain();
+          g.gain.value = 0.0001;
+          o.connect(g);
+          g.connect(ac.destination);
+          o.start();
+          o.stop(ac.currentTime + 0.05);
+        }
+      } catch (e) {}
+    };
+    document.addEventListener('pointerdown', unlock, { once: true });
+    document.addEventListener('touchend', unlock, { once: true });
     syncBtn();
   }
   return { bind: bind, play: play, enabled: enabled, syncBtn: syncBtn };

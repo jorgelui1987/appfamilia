@@ -100,6 +100,7 @@ var AppMain = (function (Store, App, AppChat, AppForms) {
     });
   }
   function init() {
+    if (Store.restoreLocalUsers) Store.restoreLocalUsers();
     bindGlobal();
     AppChat.bindChat();
     AppForms.bindForms();

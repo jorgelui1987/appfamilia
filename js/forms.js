@@ -124,7 +124,7 @@ var AppForms = (function (Store, App, AppChat) {
     if (grid) grid.addEventListener('click', function (e) {
       var dm = e.target.closest('[data-dm]');
       if (dm) {
-        if (typeof AppChat.openDM === 'function') AppChat.openDM(Number(dm.dataset.dm));
+        if (typeof AppChat.openDM === 'function') AppChat.openDM(dm.dataset.dm);
         return;
       }
     });

@@ -61,8 +61,12 @@ var Backend = (function (Store) {
       const posts = await Api.posts();
       const channels = await Api.channels();
       if (users && users.length) {
-        Store.users.length = 0;
-        users.forEach((u) => Store.users.push(u));
+        // Fusiona servidor + locales: no borra tus cuentas del dispositivo.
+        users.forEach((u) => {
+          const ex = Store.getUser(u.id);
+          if (!ex) Store.users.push(u);
+          else { ex.name = u.name; ex.role = u.role; ex.family = u.family; ex.avatar = u.avatar; }
+        });
         if (!Store.getUser(Store.state.currentUserId)) Store.state.currentUserId = Store.users[0].id;
       }
       if (posts) {
@@ -235,6 +239,17 @@ var Backend = (function (Store) {
   }
 
   async function sendMessage(channelId, text) {
+    // Si es DM y hay nube, asegura el canal en Postgres antes de enviar.
+    if (Store.backend.ok && String(channelId).startsWith('dm-')) {
+      try {
+        const m = /^dm-(\d+)-(\d+)$/.exec(String(channelId));
+        const me = String(Store.currentUser().id);
+        const peerId = m ? (String(m[1]) === me ? m[2] : m[1]) : null;
+        if (peerId) {
+          await Api.request('POST', '/api/channels/dm', { id: channelId, peerId: Number(peerId) });
+        }
+      } catch (e) { /* sigue: el POST del mensaje lo intentara igual */ }
+    }
     try {
       await Api.sendMessage(channelId, { sender: Store.currentUser().name, text: text });
       await refreshMessages(channelId);

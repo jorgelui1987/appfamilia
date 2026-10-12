@@ -21,9 +21,9 @@ var AppChat = (function (Store, App) {
 
   function openDM(otherId) {
     var me = Store.currentUser();
-    var other = Store.getUser(Number(otherId));
+    var other = Store.getUser(otherId);
     if (!other) { App.toast('Ese familiar ya no existe'); return; }
-    if (other.id === me.id) return;
+    if (String(other.id) === String(me.id)) return;
     var id = dmId(me.id, other.id);
     var exists = null;
     Store.channels.forEach(function (c) { if (c.id === id) exists = c; });
@@ -213,7 +213,7 @@ var AppChat = (function (Store, App) {
               var last = msgs[msgs.length - 1];
               if (last && last.sender !== Store.currentUser().name) {
                 App.toast('Nuevo mensaje de ' + last.sender.split(' ')[0]);
-                if (typeof Sound !== 'undefined') Sound.play();
+                try { if (typeof Sound !== 'undefined') Sound.play(); } catch (e) {}
                 try { if (navigator.vibrate) navigator.vibrate(80); } catch (e) {}
               }
             }

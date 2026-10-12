@@ -65,7 +65,7 @@ var Store = (function () {
     ]
   };
 
-  function getUser(id) { return users.find(function (u) { return u.id === id; }); }
+  function getUser(id) { return users.find(function (u) { return String(u.id) === String(id); }); }
   function currentUser() { return getUser(state.currentUserId); }
 
   function restoreLocalUsers() {
