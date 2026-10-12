@@ -132,6 +132,15 @@ var AppChat = (function (Store, App) {
     });
     var back = $('chat-back-btn');
     if (back) back.addEventListener('click', showListOnMobile);
+    var quick = $('quick-chat-btn');
+    if (quick) quick.addEventListener('click', function () {
+      App.switchTab('chat');
+      selectChannel('gen');
+      setTimeout(function () {
+        var input = $('chat-input-text');
+        if (input && window.innerWidth >= 640) input.focus();
+      }, 300);
+    });
     $('chat-photo-btn').addEventListener('click', function () {
       App.toast('Adjunta una foto desde el muro con Compartir recuerdo');
     });
