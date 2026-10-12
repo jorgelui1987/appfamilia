@@ -170,6 +170,30 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+app.post('/api/auth/reset', async (req, res) => {
+  // Recuperacion asistida: un familiar dentro genera una clave temporal.
+  // Body: { prefix, phone, newPassword, helperId }
+  try {
+    const b = req.body || {};
+    const np = normPhone(String(b.prefix || '+52').trim().slice(0, 6), b.phone);
+    const newPass = String(b.newPassword || '');
+    const helperId = Number(b.helperId) || 0;
+    if (np.digits.length < 7) return res.status(400).json({ error: 'Numero invalido' });
+    if (newPass.length < 6) return res.status(400).json({ error: 'Nueva contrasena minimo 6 caracteres' });
+    const d = getDb();
+    const helper = (await d.query('SELECT id,name FROM users WHERE id=$1', [helperId])).rows[0];
+    if (!helper) return res.status(403).json({ error: 'Solo un familiar con sesion puede ayudar a recuperar.' });
+    const target = (await d.query('SELECT id,name FROM users WHERE phone=$1', [np.phone])).rows[0];
+    if (!target) return res.status(404).json({ error: 'Ese numero no esta registrado.' });
+    if (target.id === helperId) return res.status(400).json({ error: 'Ya estas dentro: cambia tu clave desde tu perfil.' });
+    const bcrypt = require('bcryptjs');
+    const hash = await bcrypt.hash(newPass, 10);
+    await d.query('UPDATE users SET pass_hash=$1 WHERE id=$2', [hash, target.id]);
+    console.log('RESET clave para ' + target.name + ' ayudado por ' + helper.name);
+    res.json({ ok: true, name: target.name });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.put('/api/users/:id/avatar', async (req, res) => {
   try {
     const avatar = String((req.body || {}).avatar || '').slice(0, 8 * 1024 * 1024);

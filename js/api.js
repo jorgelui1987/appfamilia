@@ -26,6 +26,7 @@ var Api = (function () {
     sendMessage: (id, d) => req('POST', '/api/channels/' + id + '/messages', d),
     register: (d) => req('POST', '/api/auth/register', d),
     login: (d) => req('POST', '/api/auth/login', d),
+    reset: (d) => req('POST', '/api/auth/reset', d),
     updateAvatar: (id, avatar) => req('PUT', '/api/users/' + id + '/avatar', { avatar })
   };
 })();

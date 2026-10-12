@@ -151,6 +151,60 @@ var Auth = (function (Store, App, AppChat) {
   function bind() {
     bindAvatar();
     fillPrefixes();
+    var forgot = $('auth-forgot');
+    if (forgot) forgot.addEventListener('click', function () {
+      var sel = $('recover-prefix');
+      if (sel && !sel.options.length) {
+        COUNTRIES.forEach(function (c) {
+          var o = document.createElement('option');
+          o.value = c.code;
+          o.textContent = c.label;
+          sel.appendChild(o);
+        });
+        sel.value = $('auth-prefix').value || '+52';
+      } else if (sel) {
+        sel.value = $('auth-prefix').value || '+52';
+      }
+      var rp = $('recover-phone');
+      if (rp && !$('auth-phone').value) rp.value = '';
+      else if (rp) rp.value = $('auth-phone').value;
+      $('recover-error').textContent = '';
+      $('recover-ok').textContent = '';
+      AppChat.openModal('recover-modal');
+    });
+    var rclose = $('recover-close');
+    if (rclose) rclose.addEventListener('click', function () { AppChat.closeModal('recover-modal'); });
+    var rform = $('recover-form');
+    if (rform) rform.addEventListener('submit', function (e) {
+      e.preventDefault();
+      $('recover-error').textContent = '';
+      $('recover-ok').textContent = '';
+      var btn = $('recover-submit');
+      btn.disabled = true;
+      btn.textContent = 'Guardando...';
+      Api.reset({
+        prefix: $('recover-prefix').value,
+        phone: $('recover-phone').value,
+        newPassword: $('recover-pass').value,
+        helperId: Store.state.currentUserId
+      }).then(function (r) {
+        btn.disabled = false;
+        btn.textContent = 'Crear clave temporal';
+        $('recover-ok').textContent = 'Listo: ' + (r.name || 'tu familiar') + ' ya puede entrar con la clave temporal. Que la cambie pronto.';
+        App.toast('Clave temporal creada');
+      }).catch(function (err) {
+        btn.disabled = false;
+        btn.textContent = 'Crear clave temporal';
+        var m = String((err && err.message) || err);
+        var j = null;
+        try {
+          var s = m.indexOf('{');
+          var x = m.lastIndexOf('}');
+          if (s > -1 && x > s) j = JSON.parse(m.slice(s, x + 1));
+        } catch (ee) {}
+        $('recover-error').textContent = (j && j.error) ? j.error : 'No se pudo: ' + m.slice(0, 160);
+      });
+    });
     var btn = $('auth-btn');
     if (btn) btn.addEventListener('click', function () {
       if (logged()) { logout(); document.dispatchEvent(new CustomEvent('mf-user-changed')); return; }
