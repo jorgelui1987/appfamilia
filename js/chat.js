@@ -436,6 +436,9 @@ var AppChat = (function (Store, App) {
     }
     beat();
     presenceTimer = setInterval(beat, 20000);
+    // Si el backend conecta despues (Backend.load), reintenta enseguida.
+    document.addEventListener('mf-backend-ready', function () { try { beat(); } catch (e) {} });
+    document.addEventListener('mf-user-changed', function () { try { beat(); } catch (e) {} });
   }
 
   var sseOn = false;

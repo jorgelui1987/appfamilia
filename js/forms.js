@@ -136,7 +136,12 @@ var AppForms = (function (Store, App, AppChat) {
       var text = input.value.trim();
       if (!text) return;
       var card = f.closest('[data-post-id]');
-      Backend.addComment(Number(card.dataset.postId), text.slice(0, 300)).then(function () { App.renderPosts(); });
+      var pid = card ? card.dataset.postId : '';
+      input.value = '';
+      Backend.addComment(pid, text.slice(0, 300)).then(function () { App.renderPosts(); }).catch(function (err) {
+        App.toast('No se pudo comentar: ' + String((err && err.message) || err).slice(0, 100));
+        App.renderPosts();
+      });
     });
     var drop = $('drop-zone');
     var fileInput = $('modal-photo-file');

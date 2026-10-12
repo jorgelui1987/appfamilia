@@ -131,6 +131,7 @@ var Backend = (function (Store) {
       Store.backend.ok = true;
       setSyncBadge('cloud');
       await syncLocalPosts();
+      try { document.dispatchEvent(new CustomEvent('mf-backend-ready')); } catch (e) {}
     } catch (e) {
       Store.backend.ok = false;
       setSyncBadge('local');
@@ -200,10 +201,14 @@ var Backend = (function (Store) {
       await Api.comment(postId, { userName: Store.currentUser().name, text: text });
       await refreshPosts();
     } catch (e) {
+      // Fallback local (sirve para fotos 'local-...' y sin servidor):
+      // compara por String porque los ids locales no son numeros.
       Store.posts.forEach(function (p) {
-        if (p.id !== Number(postId)) return;
+        if (String(p.id) !== String(postId)) return;
+        p.comments = p.comments || [];
         p.comments.push({ id: Date.now(), userName: Store.currentUser().name, text: text });
       });
+      saveLocalPosts();
     }
   }
 
