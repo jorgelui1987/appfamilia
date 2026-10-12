@@ -72,13 +72,92 @@ var AppChat = (function (Store, App) {
     } catch (e) {}
   }
 
+  function peerOf(dmChannelId) {
+    var m = /^dm-(\d+)-(\d+)$/.exec(String(dmChannelId || ''));
+    if (!m) return null;
+    var me = Number(Store.state.currentUserId);
+    if (Number(m[1]) === me) return Number(m[2]);
+    if (Number(m[2]) === me) return Number(m[1]);
+    return null;
+  }
+
+  function ensureDMsForAllUsers() {
+    // Crea el privado dm-A-B para cada familiar (sin duplicar, sin yo-mismo).
+    var me = Store.currentUser();
+    if (!me) return;
+    Store.users.forEach(function (u) {
+      if (String(u.id) === String(me.id)) return;
+      var id = dmId(me.id, u.id);
+      var exists = Store.channels.some(function (c) { return String(c.id) === String(id); });
+      if (exists) return;
+      Store.channels.push({
+        id: id, name: u.name, subtitle: 'Chat privado · solo ustedes dos',
+        type: 'direct', avatar: u.avatar, dm: true, peerId: u.id
+      });
+      Store.messages[id] = Store.messages[id] || [];
+    });
+    // Refresca nombres/avatares por si el familiar cambio su foto.
+    Store.channels.forEach(function (c) {
+      if (!c.dm) return;
+      var peerId = c.peerId != null ? c.peerId : peerOf(c.id);
+      if (peerId == null) return;
+      var peer = Store.getUser(peerId);
+      if (!peer) return;
+      c.peerId = peer.id;
+      c.name = peer.name;
+      c.avatar = peer.avatar;
+    });
+  }
+
   function renderChannels() {
     var list = $('chat-channels-list');
     if (!list) return;
+    // Asegura 1 privado por familiar (asi salen TODOS los contactos).
+    try { ensureDMsForAllUsers(); } catch (e) {}
     list.innerHTML = '';
     var q = (Store.state.chatSearch || '').toLowerCase().trim();
+    var meId = String(Store.state.currentUserId);
+    // Solo mis privados: oculta DMs de otros (ej. dm-1-2 cuando soy Jorge)
+    // y mi propio DM. Asi no se repite Maria Perez ni salgo yo.
+    var chans = Store.channels.filter(function (c) {
+      if (!c.dm) return true;
+      var pid = c.peerId != null ? c.peerId : peerOf(c.id);
+      // Legacy sin peerId ('maria', etc.): resuelvelo por nombre 1 sola vez.
+      if (pid == null && String(c.id).indexOf('dm-') !== 0) {
+        var byName = null;
+        Store.users.forEach(function (u) {
+          if (String(u.name).toLowerCase() === String(c.name || '').toLowerCase()) byName = u;
+        });
+        if (byName) { c.peerId = byName.id; pid = byName.id; }
+      }
+      if (pid == null) return true;
+      if (String(pid) === meId) return false;
+      var m = /^dm-(\d+)-(\d+)$/.exec(String(c.id));
+      if (m) {
+        // dm-A-B que no me incluye -> es de otros, ocultar.
+        if (String(m[1]) !== meId && String(m[2]) !== meId) return false;
+      }
+      return true;
+    });
+    // Dedupe final: 1 fila por familiar (si hay legacy + dm-A-B, queda dm-A-B).
+    var seenPeer = {};
+    var deduped = [];
+    // Ordena modernos primero para que ganen al dedupar.
+    chans.slice().sort(function (a, b) {
+      var am = String(a.id).indexOf('dm-') === 0 ? 0 : 1;
+      var bm = String(b.id).indexOf('dm-') === 0 ? 0 : 1;
+      return am - bm;
+    }).forEach(function (c) {
+      if (!c.dm) { deduped.push(c); return; }
+      var pid = c.peerId != null ? c.peerId : peerOf(c.id);
+      var key = pid != null ? 'p' + pid : 'c' + String(c.id);
+      if (seenPeer[key]) return;
+      seenPeer[key] = true;
+      deduped.push(c);
+    });
+    var chans2 = deduped;
     // Grupos primero, privados despues.
-    var ordered = Store.channels.slice().sort(function (a, b) {
+    var ordered = chans2.slice().sort(function (a, b) {
       var ad = a.dm ? 1 : 0;
       var bd = b.dm ? 1 : 0;
       return ad - bd;
@@ -152,10 +231,28 @@ var AppChat = (function (Store, App) {
     return msgs.length + '|' + (msgs.length ? String(msgs[msgs.length - 1].text).slice(0, 40) : '');
   }
 
+  // Guarda el ultimo aviso mostrado por canal para no repetirlo al reabrir.
+  function seenKey(id, last) {
+    return String(id) + '|' + String(last ? last.sender : '') + '|' + String(last ? last.text : '').slice(0, 40);
+  }
+  function wasSeen(id, last) {
+    try {
+      return localStorage.getItem('mf-seen-' + seenKey(id, last)) === '1';
+    } catch (e) { return false; }
+  }
+  function markSeen(id, last) {
+    try { localStorage.setItem('mf-seen-' + seenKey(id, last), '1'); } catch (e) {}
+  }
+
   function notifyIncoming(channelId, text) {
     try {
       var ch = null;
       Store.channels.forEach(function (c) { if (String(c.id) === String(channelId)) ch = c; });
+      var msgs = Store.messages[channelId] || [];
+      var last = msgs[msgs.length - 1];
+      // Si ya avisamos este mensaje antes (ej. al reabrir la app), no repetir.
+      if (last && wasSeen(channelId, last)) return;
+      if (last) markSeen(channelId, last);
       var name = ch ? ch.name : 'Chat';
       App.toast('Nuevo mensaje en ' + name.split(' ').slice(0, 2).join(' ') + (text ? ': ' + String(text).slice(0, 60) : ''));
     } catch (e) {
@@ -171,6 +268,7 @@ var AppChat = (function (Store, App) {
 
   var watchTimer = null;
   var watchState = {};
+  var watchReady = false;
 
   function snapshotAll() {
     var snap = {};
@@ -181,11 +279,31 @@ var AppChat = (function (Store, App) {
     return snap;
   }
 
+  // Se llama despues de Backend.load(): marca todo lo ya leido como visto.
+  function markAllSeenNow() {
+    watchState = snapshotAll();
+    watchReady = true;
+    try {
+      Store.channels.forEach(function (c) {
+        var msgs = Store.messages[c.id] || [];
+        var last = msgs[msgs.length - 1];
+        if (last) markSeen(c.id, last);
+      });
+    } catch (e) {}
+  }
+
   function startWatcher() {
     if (watchTimer) return;
     watchState = snapshotAll();
+    // Al abrir la app NO avises de mensajes viejos: actualiza el estado
+    // despues de la primera carga del servidor para solo avisar lo NUEVO.
+    watchReady = false;
+    setTimeout(function () {
+      try { watchState = snapshotAll(); watchReady = true; } catch (e) {}
+    }, 15000);
     watchTimer = setInterval(function () {
       if (!Store.backend.ok) return;
+      if (!watchReady) return;
       if (typeof document !== 'undefined' && document.hidden) return;
       var ids = Store.channels.map(function (c) { return c.id; });
       (function next(i) {
@@ -371,5 +489,5 @@ var AppChat = (function (Store, App) {
     });
   }
 
-  return { openModal: openModal, closeModal: closeModal, renderChannels: renderChannels, renderMessages: renderMessages, selectChannel: selectChannel, bindChat: bindChat, openDM: openDM, restoreDMs: restoreDMs };
+  return { openModal: openModal, closeModal: closeModal, renderChannels: renderChannels, renderMessages: renderMessages, selectChannel: selectChannel, bindChat: bindChat, openDM: openDM, restoreDMs: restoreDMs, markAllSeenNow: markAllSeenNow, ensureDMsForAllUsers: ensureDMsForAllUsers };
 })(Store, App);

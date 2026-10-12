@@ -106,6 +106,16 @@ var Backend = (function (Store) {
     loadLocalPosts();
     if (typeof AppChat !== 'undefined' && AppChat.restoreDMs) AppChat.restoreDMs();
     loadLocalMsgs();
+    // Marca lo cargado como ya visto + asegura 1 DM por familiar.
+    try {
+      if (typeof AppChat !== 'undefined' && AppChat.ensureDMsForAllUsers) AppChat.ensureDMsForAllUsers();
+    } catch (e) {}
+    try {
+      if (typeof AppChat !== 'undefined' && AppChat.markAllSeenNow) AppChat.markAllSeenNow();
+    } catch (e) {}
+    try {
+      if (typeof AppChat !== 'undefined' && AppChat.renderChannels) AppChat.renderChannels();
+    } catch (e) {}
   }
 
   async function refreshPosts() {
