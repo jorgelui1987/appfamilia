@@ -7,6 +7,7 @@ var Auth = (function (Store, App, AppChat) {
   function setMode(m) {
     mode = m;
     var isReg = m === 'register';
+    $('auth-avatar-wrap').classList.toggle('hidden', !isReg);
     $('auth-name-wrap').classList.toggle('hidden', !isReg);
     $('auth-family-wrap').classList.toggle('hidden', !isReg);
     $('auth-submit').textContent = isReg ? 'Crear mi cuenta' : 'Entrar';
@@ -33,7 +34,75 @@ var Auth = (function (Store, App, AppChat) {
     App.toast(msg || ('Bienvenido, ' + u.name.split(' ')[0]));
   }
 
+  var avatarData = '';
+
+  function compressAvatar(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var w = img.naturalWidth || 1;
+          var h = img.naturalHeight || 1;
+          var side = Math.min(w, h);
+          var sx = (w - side) / 2;
+          var sy = (h - side) / 2;
+          var canvas = document.createElement('canvas');
+          canvas.width = 256;
+          canvas.height = 256;
+          canvas.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, 256, 256);
+          URL.revokeObjectURL(url);
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
+        } catch (e) { URL.revokeObjectURL(url); reject(e); }
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('img')); };
+      img.src = url;
+    });
+  }
+
+  function bindAvatar() {
+    var btn = $('auth-avatar-btn');
+    var file = $('auth-avatar-file');
+    var preview = $('auth-avatar-preview');
+    var clear = $('auth-avatar-clear');
+    var err = $('auth-avatar-error');
+    if (!btn || !file) return;
+    btn.addEventListener('click', function () { file.click(); });
+    file.addEventListener('change', function () {
+      var f = file.files[0];
+      if (!f) return;
+      err.textContent = '';
+      if (!/^image\/(jpeg|png|webp)$/.test(f.type)) {
+        err.textContent = 'Formato no permitido. Usa JPG, PNG o WEBP.';
+        return;
+      }
+      if (f.size > 8 * 1024 * 1024) {
+        err.textContent = 'La foto supera 8MB. Elige otra.';
+        return;
+      }
+      // Solo la foto que el usuario eligio se procesa; nada se sube hasta Crear cuenta.
+      compressAvatar(f).then(function (dataUrl) {
+        avatarData = dataUrl;
+        preview.src = dataUrl;
+        preview.classList.remove('hidden');
+        clear.classList.remove('hidden');
+        btn.innerHTML = '<i class="fa-solid fa-camera mr-2 text-emerald-600"></i>Cambiar foto';
+      }).catch(function () {
+        err.textContent = 'No se pudo leer esa foto. Prueba con otra.';
+      });
+    });
+    clear.addEventListener('click', function () {
+      avatarData = '';
+      file.value = '';
+      preview.src = '';
+      preview.classList.add('hidden');
+      clear.classList.add('hidden');
+      btn.innerHTML = '<i class="fa-solid fa-camera mr-2 text-emerald-600"></i>Tomar foto o elegir de galeria';
+    });
+  }
+
   function bind() {
+    bindAvatar();
     var btn = $('auth-btn');
     if (btn) btn.addEventListener('click', function () {
       try {
@@ -61,8 +130,13 @@ var Auth = (function (Store, App, AppChat) {
       if (mode === 'register') {
         var name = $('auth-name').value.trim();
         var family = $('auth-family').value.trim() || 'Mi Familia';
-        Api.register({ name: name, email: email, password: pass, family: family, role: 'Familiar' }).then(function (r) {
+        Api.register({ name: name, email: email, password: pass, family: family, role: 'Familiar', avatar: avatarData }).then(function (r) {
           done();
+          avatarData = '';
+          var pv = $('auth-avatar-preview');
+          if (pv) { pv.src = ''; pv.classList.add('hidden'); }
+          var cl = $('auth-avatar-clear');
+          if (cl) cl.classList.add('hidden');
           applyUser(r.user, 'Cuenta creada. Bienvenido, ' + r.user.name.split(' ')[0]);
           document.dispatchEvent(new CustomEvent('mf-user-changed'));
         }).catch(function (err) {

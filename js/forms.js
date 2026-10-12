@@ -50,7 +50,63 @@ var AppForms = (function (Store, App, AppChat) {
     });
   }
 
+  function bindProfilePhoto() {
+    var btn = $('profile-photo-btn');
+    var file = $('profile-photo-file');
+    if (!btn || !file) return;
+    btn.addEventListener('click', function () {
+      var me = Store.currentUser();
+      if (!me || !me.id) { App.toast('Entra con tu cuenta para cambiar tu foto'); return; }
+      file.click();
+    });
+    file.addEventListener('change', function () {
+      var f = file.files[0];
+      file.value = '';
+      if (!f) return;
+      if (!/^image\/(jpeg|png|webp)$/.test(f.type)) {
+        App.toast('Formato no permitido. Usa JPG, PNG o WEBP.');
+        return;
+      }
+      if (f.size > 8 * 1024 * 1024) {
+        App.toast('La foto supera 8MB. Elige otra.');
+        return;
+      }
+      var url = URL.createObjectURL(f);
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var w = img.naturalWidth || 1;
+          var h = img.naturalHeight || 1;
+          var side = Math.min(w, h);
+          var canvas = document.createElement('canvas');
+          canvas.width = 256;
+          canvas.height = 256;
+          canvas.getContext('2d').drawImage(img, (w - side) / 2, (h - side) / 2, side, side, 0, 0, 256, 256);
+          URL.revokeObjectURL(url);
+          var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          // Solo esta foto elegida se envia al servidor.
+          var me = Store.currentUser();
+          Api.updateAvatar(me.id, dataUrl).then(function (r) {
+            me.avatar = r.user.avatar;
+            updateUserUI();
+            App.renderPosts();
+            renderFamilies();
+            App.toast('Foto de perfil actualizada');
+          }).catch(function (err) {
+            App.toast('No se pudo guardar: ' + String((err && err.message) || err).slice(0, 120));
+          });
+        } catch (e) {
+          URL.revokeObjectURL(url);
+          App.toast('No se pudo leer esa foto.');
+        }
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); App.toast('No se pudo leer esa foto.'); };
+      img.src = url;
+    });
+  }
+
   function bindForms() {
+    bindProfilePhoto();
     $('users-selector-list').addEventListener('click', function (e) {
       var b = e.target.closest('[data-user]');
       if (!b) return;

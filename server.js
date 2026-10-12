@@ -84,9 +84,14 @@ app.post('/api/auth/register', async (req, res) => {
     const pass = String(b.password || '');
     const family = String(b.family || 'Mi Familia').trim().slice(0, 80) || 'Mi Familia';
     const role = String(b.role || 'Familiar').trim().slice(0, 40) || 'Familiar';
+    let avatar = String(b.avatar || '').slice(0, 8 * 1024 * 1024);
     if (name.length < 2) return res.status(400).json({ error: 'Nombre minimo 2 caracteres' });
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return res.status(400).json({ error: 'Email invalido' });
     if (pass.length < 6) return res.status(400).json({ error: 'Contrasena minimo 6 caracteres' });
+    if (avatar && !/^data:image\/(jpeg|png|webp);base64,/.test(avatar) && !/^https?:\/\//.test(avatar)) {
+      return res.status(400).json({ error: 'Foto de perfil invalida' });
+    }
+    if (!avatar) avatar = avatarFor(name);
     const bcrypt = require('bcryptjs');
     const hash = await bcrypt.hash(pass, 10);
     const d = getDb();
@@ -94,7 +99,7 @@ app.post('/api/auth/register', async (req, res) => {
     try {
       const r = await d.query(
         'INSERT INTO users (name,role,family,avatar,email,pass_hash) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id,name,role,family,avatar,email',
-        [name, role, family, avatarFor(name), email, hash]
+        [name, role, family, avatar, email, hash]
       );
       row = r.rows[0];
     } catch (e) {
@@ -119,6 +124,21 @@ app.post('/api/auth/login', async (req, res) => {
     const ok = await bcrypt.compare(pass, u.pass_hash);
     if (!ok) return res.status(401).json({ error: 'Credenciales invalidas' });
     res.json({ user: { id: u.id, name: u.name, role: u.role, family: u.family, avatar: u.avatar, email: u.email } });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/users/:id/avatar', async (req, res) => {
+  try {
+    const avatar = String((req.body || {}).avatar || '').slice(0, 8 * 1024 * 1024);
+    if (!/^data:image\/(jpeg|png|webp);base64,/.test(avatar)) {
+      return res.status(400).json({ error: 'Foto invalida. Usa JPG, PNG o WEBP.' });
+    }
+    const r = await getDb().query(
+      'UPDATE users SET avatar=$1 WHERE id=$2 RETURNING id,name,role,family,avatar,email',
+      [avatar, Number(req.params.id)]
+    );
+    if (!r.rows[0]) return res.status(404).json({ error: 'Usuario no encontrado' });
+    res.json({ user: r.rows[0] });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
