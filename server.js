@@ -69,7 +69,8 @@ app.get('/api/health', async (req, res) => {
     await getDb().query('SELECT 1');
     res.json({ ok: true, db: 'up' });
   } catch (e) {
-    res.status(500).json({ ok: false, error: e.message });
+    console.error('HEALTH db down:', e.code || '', e.message);
+    res.status(500).json({ ok: false, db: 'down', code: e.code || null, error: e.message, url: getDb().maskedUrl ? getDb().maskedUrl() : undefined });
   }
 });
 
