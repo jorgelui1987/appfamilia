@@ -273,6 +273,26 @@ app.get('/api/channels', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+app.post('/api/channels/dm', async (req, res) => {
+  // Crea el canal privado dm-A-B si no existe (solo lo ven esos dos).
+  try {
+    const b = req.body || {};
+    const id = String(b.id || '').slice(0, 40);
+    const m = /^dm-(\d+)-(\d+)$/.exec(id);
+    if (!m) return res.status(400).json({ error: 'canal invalido' });
+    const d = getDb();
+    const ex = await d.query('SELECT * FROM channels WHERE id=$1', [id]);
+    if (ex.rows[0]) return res.json(ex.rows[0]);
+    const peer = (await d.query('SELECT id,name,avatar FROM users WHERE id=$1', [Number(b.peerId)])).rows[0];
+    if (!peer) return res.status(404).json({ error: 'familiar no encontrado' });
+    const r = await d.query(
+      "INSERT INTO channels (id,name,subtitle,type,icon,color,avatar) VALUES ($1,$2,'Chat privado · solo ustedes dos','direct','','',$3) RETURNING *",
+      [id, peer.name, peer.avatar || '']
+    );
+    res.status(201).json(r.rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/channels/:id/messages', async (req, res) => {
   try {
     const r = await getDb().query('SELECT sender,text,created_at FROM messages WHERE channel_id=$1 ORDER BY id LIMIT 200', [req.params.id]);

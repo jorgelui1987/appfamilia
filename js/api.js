@@ -15,6 +15,7 @@ var Api = (function () {
     return ct.includes('json') ? res.json() : res.text();
   }
   return {
+    request: req,
     health: () => req('GET', '/api/health'),
     users: () => req('GET', '/api/users'),
     posts: () => req('GET', '/api/posts'),

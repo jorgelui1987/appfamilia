@@ -13,14 +13,88 @@ var AppChat = (function (Store, App) {
     if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
   }
 
+  function dmId(a, b) {
+    var x = Math.min(Number(a), Number(b));
+    var y = Math.max(Number(a), Number(b));
+    return 'dm-' + x + '-' + y;
+  }
+
+  function openDM(otherId) {
+    var me = Store.currentUser();
+    var other = Store.getUser(Number(otherId));
+    if (!other) { App.toast('Ese familiar ya no existe'); return; }
+    if (other.id === me.id) return;
+    var id = dmId(me.id, other.id);
+    var exists = null;
+    Store.channels.forEach(function (c) { if (c.id === id) exists = c; });
+    if (!exists) {
+      exists = {
+        id: id, name: other.name, subtitle: 'Chat privado · solo ustedes dos',
+        type: 'direct', avatar: other.avatar, dm: true, peerId: other.id
+      };
+      Store.channels.push(exists);
+      Store.messages[id] = Store.messages[id] || [];
+      try {
+        var saved = JSON.parse(localStorage.getItem('mf-dm-channels') || '[]');
+        if (saved.indexOf(id) === -1) {
+          saved.push(id);
+          localStorage.setItem('mf-dm-channels', JSON.stringify(saved));
+        }
+      } catch (e) {}
+      if (Store.backend.ok) {
+        Api.request({ method: 'POST', url: '/api/channels/dm', body: { id: id, peerId: other.id } }).catch(function () {});
+      }
+    } else {
+      exists.peerId = other.id;
+      exists.avatar = other.avatar;
+    }
+    App.switchTab('chat');
+    selectChannel(id);
+    App.toast('Chat privado con ' + other.name.split(' ')[0] + ' (nadie mas lo ve)');
+  }
+
+  function restoreDMs() {
+    try {
+      var saved = JSON.parse(localStorage.getItem('mf-dm-channels') || '[]');
+      saved.forEach(function (id) {
+        var m = /^dm-(\d+)-(\d+)$/.exec(id);
+        if (!m) return;
+        var me = Store.state.currentUserId;
+        var peerId = Number(m[1]) === Number(me) ? Number(m[2]) : Number(m[1]);
+        var peer = Store.getUser(peerId);
+        if (!peer) return;
+        var exists = Store.channels.some(function (c) { return c.id === id; });
+        if (!exists) {
+          Store.channels.push({ id: id, name: peer.name, subtitle: 'Chat privado · solo ustedes dos', type: 'direct', avatar: peer.avatar, dm: true, peerId: peer.id });
+          Store.messages[id] = Store.messages[id] || [];
+        }
+      });
+    } catch (e) {}
+  }
+
   function renderChannels() {
     var list = $('chat-channels-list');
     if (!list) return;
     list.innerHTML = '';
     var q = (Store.state.chatSearch || '').toLowerCase().trim();
+    // Grupos primero, privados despues.
+    var ordered = Store.channels.slice().sort(function (a, b) {
+      var ad = a.dm ? 1 : 0;
+      var bd = b.dm ? 1 : 0;
+      return ad - bd;
+    });
     var shown = 0;
-    Store.channels.forEach(function (ch) {
+    var lastSection = '';
+    ordered.forEach(function (ch) {
       if (q && ch.name.toLowerCase().indexOf(q) === -1 && (ch.subtitle || '').toLowerCase().indexOf(q) === -1) return;
+      var section = ch.dm ? 'Privados' : 'Grupos';
+      if (!q && section !== lastSection) {
+        lastSection = section;
+        var head = document.createElement('p');
+        head.className = 'px-3.5 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400';
+        head.textContent = section === 'Privados' ? 'Privados (solo ustedes dos)' : 'Grupos familiares';
+        list.appendChild(head);
+      }
       shown++;
       var active = ch.id === Store.state.activeChatId;
       var el = document.createElement('button');
@@ -31,7 +105,7 @@ var AppChat = (function (Store, App) {
       el.dataset.channel = ch.id;
       var avatar = ch.type === 'group'
         ? '<div class="w-11 h-11 rounded-full ' + ch.color + ' text-white flex items-center justify-center"><i class="fa-solid ' + ch.icon + '"></i></div>'
-        : '<img src="' + escapeHtml(ch.avatar) + '" alt="" loading="lazy" class="w-11 h-11 rounded-full object-cover" />';
+        : '<span class="relative"><img src="' + escapeHtml(ch.avatar) + '" alt="" loading="lazy" class="w-11 h-11 rounded-full object-cover" />' + (ch.dm ? '<span class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-slate-900 text-emerald-400 rounded-full text-[9px] flex items-center justify-center" title="Privado"><i class="fa-solid fa-lock"></i></span>' : '') + '</span>';
       el.innerHTML = avatar + '<div class="flex-1 overflow-hidden"><h4 class="font-bold text-sm truncate">' + escapeHtml(ch.name) + '</h4><p class="text-xs text-slate-500 truncate">' + escapeHtml(ch.subtitle) + '</p></div>';
       list.appendChild(el);
     });
@@ -214,6 +288,7 @@ var AppChat = (function (Store, App) {
     });
     var back = $('chat-back-btn');
     if (back) back.addEventListener('click', showListOnMobile);
+    restoreDMs();
     startPolling();
     startLive();
     $('chat-photo-btn').addEventListener('click', function () {
@@ -221,5 +296,5 @@ var AppChat = (function (Store, App) {
     });
   }
 
-  return { openModal: openModal, closeModal: closeModal, renderChannels: renderChannels, renderMessages: renderMessages, selectChannel: selectChannel, bindChat: bindChat };
+  return { openModal: openModal, closeModal: closeModal, renderChannels: renderChannels, renderMessages: renderMessages, selectChannel: selectChannel, bindChat: bindChat, openDM: openDM, restoreDMs: restoreDMs };
 })(Store, App);

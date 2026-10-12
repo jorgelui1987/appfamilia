@@ -43,7 +43,8 @@ var AppForms = (function (Store, App, AppChat) {
       var card = document.createElement('div');
       card.className = 'bg-white rounded-2xl p-5 border border-slate-200 shadow-sm';
       var rows = groups[fam].map(function (u) {
-        return '<div class="flex items-center gap-3 py-1.5"><img src="' + escapeHtml(u.avatar) + '" alt="" loading="lazy" class="w-10 h-10 rounded-full object-cover" /><div><p class="font-semibold text-sm">' + escapeHtml(u.name) + '</p><p class="text-xs text-slate-400">' + escapeHtml(u.role) + '</p></div></div>';
+        var isMe = u.id === Store.state.currentUserId;
+        return '<div class="flex items-center gap-3 py-1.5"><img src="' + escapeHtml(u.avatar) + '" alt="" loading="lazy" class="w-10 h-10 rounded-full object-cover" /><div class="flex-1"><p class="font-semibold text-sm">' + escapeHtml(u.name) + (isMe ? ' <span class="text-[10px] text-emerald-600 font-bold">(tu)</span>' : '') + '</p><p class="text-xs text-slate-400">' + escapeHtml(u.role) + '</p></div>' + (isMe ? '' : '<button type="button" data-dm="' + u.id + '" class="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 transition" title="Chat privado con ' + escapeHtml(u.name) + '"><i class="fa-brands fa-whatsapp mr-1"></i>Mensaje</button>') + '</div>';
       }).join('');
       card.innerHTML = '<div class="mb-3 pb-3 border-b border-slate-100"><h3 class="font-bold text-base">' + escapeHtml(fam) + '</h3><span class="text-xs text-slate-500">' + groups[fam].length + ' Integrantes</span></div>' + rows;
       grid.appendChild(card);
@@ -114,8 +115,18 @@ var AppForms = (function (Store, App, AppChat) {
       updateUserUI();
       App.renderPosts();
       renderUserSelector();
+      AppChat.restoreDMs();
+      AppChat.renderChannels();
       AppChat.closeModal('user-modal');
       App.toast('Ahora eres ' + Store.currentUser().name);
+    });
+    var grid = $('families-grid');
+    if (grid) grid.addEventListener('click', function (e) {
+      var dm = e.target.closest('[data-dm]');
+      if (dm) {
+        if (typeof AppChat.openDM === 'function') AppChat.openDM(Number(dm.dataset.dm));
+        return;
+      }
     });
     $('posts-container').addEventListener('submit', function (e) {
       var f = e.target.closest('[data-comment-form]');

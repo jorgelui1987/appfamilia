@@ -71,7 +71,10 @@ var Backend = (function (Store) {
       }
       if (channels && channels.length) {
         Store.channels.length = 0;
-        channels.forEach((c) => Store.channels.push(c));
+        channels.forEach((c) => {
+          if (String(c.id).startsWith('dm-')) c.dm = true;
+          Store.channels.push(c);
+        });
         const ids = channels.map((c) => c.id);
         if (ids.indexOf(Store.state.activeChatId) === -1) Store.state.activeChatId = ids[0];
         for (const c of channels) {
