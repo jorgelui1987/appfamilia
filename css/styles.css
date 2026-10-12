@@ -1,0 +1,33 @@
+/* MiFamilia — estilos extra (Tailwind cubre el resto) */
+html { scroll-behavior: smooth; }
+
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.custom-scrollbar { scrollbar-width: thin; scrollbar-color: #cbd5e1 #f1f5f9; }
+
+.skip-link {
+  position: absolute; left: -9999px; top: 0; z-index: 100;
+  background: #0f172a; color: #fff; padding: .75rem 1rem;
+  border-radius: 0 0 .75rem 0; font-size: .85rem; font-weight: 700;
+}
+.skip-link:focus { left: 0; }
+:focus-visible { outline: 3px solid #10b981; outline-offset: 2px; }
+
+.feed-img { transition: transform .5s ease; }
+.feed-img:hover { transform: scale(1.03); }
+
+.modal { transition: opacity .2s ease; }
+.modal[hidden] { display: none; }
+
+.toast-in { animation: toastIn .25s ease; }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { animation: none !important; transition: none !important; }
+}

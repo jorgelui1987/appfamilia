@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-100">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MiFamilia - Red Social y Chat Privado</title>
+<meta name="description" content="MiFamilia: muro de fotos, chat familiar, directorio y cumpleanos." />
+<meta name="theme-color" content="#0f172a" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>H</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{fontFamily:{sans:['Plus Jakarta Sans','sans-serif']}}}};</script>
+<link rel="stylesheet" href="css/styles.css" />
+<script src="js/store.js" defer></script>
+<script src="js/app.js" defer></script>
+<script src="js/chat.js" defer></script>
+<script src="js/forms.js" defer></script>
+<script src="js/main.js" defer></script>
+</head>
+<body class="h-full flex flex-col font-sans text-slate-800 antialiased">
+<a class="skip-link" href="#contenido">Saltar al contenido</a>
+<header class="bg-slate-900 text-white sticky top-0 z-40 shadow-lg border-b border-slate-800">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex items-center justify-between h-16">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center" aria-hidden="true"><i class="fa-solid fa-house-chimney-window"></i></div>
+<div><h1 class="font-bold text-lg leading-tight">MiFamilia <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">Privado</span></h1><p class="text-xs text-slate-400">Portal y Galeria Compartida</p></div>
+</div>
+<nav class="hidden md:flex space-x-1" aria-label="Navegacion principal">
+<button type="button" data-tab="feed" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white">Muro de Fotos</button>
+<button type="button" data-tab="chat" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:bg-slate-800">Chat Familiar</button>
+<button type="button" data-tab="members" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:bg-slate-800">Familias</button>
+<button type="button" data-tab="calendar" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:bg-slate-800">Cumpleanos</button>
+</nav>
+<div class="flex items-center gap-3">
+<div class="text-right hidden sm:block"><p id="current-user-name" class="text-sm font-semibold leading-tight">Papa (Carlos)</p><p id="current-user-family" class="text-xs text-emerald-400">Familia Castro</p></div>
+<button type="button" id="user-switch-btn" class="p-1 bg-slate-800 rounded-full border border-slate-700" aria-label="Cambiar de familiar" aria-haspopup="dialog"><img id="current-user-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" class="w-9 h-9 rounded-full object-cover" alt="Foto de perfil actual" /></button>
+</div>
+</div>
+</div>
+<div class="md:hidden flex justify-around border-t border-slate-800 py-2" role="navigation" aria-label="Navegacion movil">
+<button type="button" data-tab="feed" class="mob-tab text-emerald-400 text-xs">Muro</button>
+<button type="button" data-tab="chat" class="mob-tab text-slate-400 text-xs">Chat</button>
+<button type="button" data-tab="members" class="mob-tab text-slate-400 text-xs">Familias</button>
+<button type="button" data-tab="calendar" class="mob-tab text-slate-400 text-xs">Eventos</button>
+</div>
+</header>
+<main id="contenido" class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col overflow-hidden">
+<!-- FEED -->
+<section id="tab-feed-view" class="tab-content flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 overflow-y-auto pr-1 custom-scrollbar" aria-label="Muro de fotos">
+<div class="space-y-6">
+<div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+<div class="flex items-center gap-4">
+<img id="sidebar-user-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" class="w-14 h-14 rounded-full object-cover border-2 border-emerald-500" alt="Avatar del usuario" />
+<div><h3 id="sidebar-user-name" class="font-bold text-slate-800">Carlos Castro</h3><span id="sidebar-user-family" class="inline-block bg-emerald-100 text-emerald-800 text-xs font-semibold px-2.5 py-0.5 rounded-full mt-1">Familia Castro</span></div>
+</div>
+<div class="mt-4 pt-4 border-t border-slate-100 grid grid-cols-2 gap-2 text-center text-xs">
+<div class="bg-slate-50 p-2.5 rounded-xl"><span id="stat-posts-count" class="block font-bold text-base">0</span><span class="text-slate-500">Fotos subidas</span></div>
+<div class="bg-slate-50 p-2.5 rounded-xl"><span id="stat-members-count" class="block font-bold text-base">0</span><span class="text-slate-500">Integrantes</span></div>
+</div>
+</div>
+<div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+<h4 class="font-bold text-sm mb-3"><i class="fa-solid fa-filter text-emerald-600"></i> Filtrar Recuerdos</h4>
+<div class="space-y-2" role="group" aria-label="Filtros">
+<button type="button" data-filter="all" class="filter-btn w-full text-left px-3 py-2 rounded-xl text-sm font-semibold bg-emerald-50 text-emerald-700">Todas las familias</button>
+<button type="button" data-filter="mi-familia" class="filter-btn w-full text-left px-3 py-2 rounded-xl text-sm text-slate-600 hover:bg-slate-50">Solo mi familia</button>
+<button type="button" data-filter="eventos" class="filter-btn w-full text-left px-3 py-2 rounded-xl text-sm text-slate-600 hover:bg-slate-50">Cumpleanos y Fiestas</button>
+</div>
+</div>
+<button type="button" data-open-upload class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-2xl shadow-lg transition active:scale-95"><i class="fa-solid fa-cloud-arrow-up mr-2"></i>Compartir un nuevo recuerdo</button>
+</div>
+<div class="lg:col-span-2 space-y-6">
+<div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-3">
+<img id="post-box-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" class="w-10 h-10 rounded-full object-cover" alt="" />
+<button type="button" data-open-upload class="flex-1 bg-slate-100 text-slate-500 text-left px-4 py-2.5 rounded-full text-sm">Que recuerdo quieres compartir hoy?</button>
+<button type="button" data-open-upload class="bg-emerald-100 text-emerald-700 p-2.5 rounded-full" aria-label="Subir foto"><i class="fa-solid fa-image"></i></button>
+</div>
+<div id="posts-container" class="space-y-6" aria-live="polite"></div>
+</div>
+</section>
+<!-- CHAT -->
+<section id="tab-chat-view" class="tab-content hidden flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden h-[calc(100vh-140px)] flex" aria-label="Chat familiar">
+<div class="w-full sm:w-80 border-r border-slate-200 flex flex-col bg-slate-50">
+<div class="p-4 bg-slate-100 border-b border-slate-200"><h2 class="font-bold text-base"><i class="fa-brands fa-whatsapp text-emerald-500"></i> Chats Familiares</h2></div>
+<div class="p-3"><label class="sr-only" for="chat-search">Buscar conversacion</label><input id="chat-search" type="text" placeholder="Buscar conversacion..." class="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs" /></div>
+<div id="chat-channels-list" class="flex-1 overflow-y-auto divide-y divide-slate-100 custom-scrollbar" role="listbox" aria-label="Canales"></div>
+</div>
+<div class="hidden sm:flex flex-1 flex-col bg-[#efeae2]/40">
+<div class="p-3.5 bg-slate-100 border-b border-slate-200 flex items-center gap-3">
+<div id="active-chat-icon" class="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center"><i class="fa-solid fa-users"></i></div>
+<div><h3 id="active-chat-title" class="font-bold text-sm">Grupo General Familiar</h3><p id="active-chat-subtitle" class="text-xs text-slate-500">Todos los integrantes</p></div>
+</div>
+<div id="chat-messages-container" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar" aria-live="polite"></div>
+<form id="chat-form" class="p-3 bg-slate-100 border-t border-slate-200 flex items-center gap-2">
+<button type="button" id="chat-photo-btn" class="text-slate-500 p-2" aria-label="Enviar imagen"><i class="fa-solid fa-paperclip text-lg"></i></button>
+<label class="sr-only" for="chat-input-text">Escribe un mensaje</label>
+<input id="chat-input-text" type="text" placeholder="Escribe un mensaje..." maxlength="500" autocomplete="off" class="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-full text-sm" />
+<button type="submit" class="w-10 h-10 bg-emerald-600 text-white rounded-full" aria-label="Enviar"><i class="fa-solid fa-paper-plane text-sm"></i></button>
+</form>
+</div>
+</section>
+<!-- MIEMBROS -->
+<section id="tab-members-view" class="tab-content hidden flex-1 overflow-y-auto custom-scrollbar space-y-6" aria-label="Directorio de la familia">
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center flex-wrap gap-3">
+<div><h2 class="font-bold text-xl">Directorio de la Familia</h2><p class="text-slate-500 text-sm">Integrantes agrupados por ramas</p></div>
+<button type="button" id="invite-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl"><i class="fa-solid fa-user-plus mr-1"></i>Invitar familiar</button>
+</div>
+<div id="families-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+</section>
+<!-- CALENDARIO -->
+<section id="tab-calendar-view" class="tab-content hidden flex-1 overflow-y-auto custom-scrollbar space-y-6" aria-label="Cumpleanos y reuniones">
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center flex-wrap gap-3">
+<div><h2 class="font-bold text-xl">Proximos Cumpleanos y Reuniones</h2><p class="text-slate-500 text-sm">No olvides felicitarlos</p></div>
+<button type="button" id="event-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl"><i class="fa-solid fa-plus mr-1"></i>Nuevo Evento</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="bg-gradient-to-r from-pink-500 to-rose-500 text-white p-5 rounded-2xl flex items-center justify-between gap-3">
+<div><span class="text-xs font-semibold uppercase bg-white/20 px-2 py-0.5 rounded-full">Manana</span><h3 class="font-bold text-lg mt-1">Cumpleanos de Tia Maria</h3><p class="text-xs text-pink-100">Cumple 52 anos</p></div>
+<button type="button" data-goto-chat class="bg-white text-pink-600 px-3.5 py-2 rounded-xl font-bold text-xs">Enviar mensaje</button>
+</div>
+<div class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-5 rounded-2xl flex items-center justify-between gap-3">
+<div><span class="text-xs font-semibold uppercase bg-white/20 px-2 py-0.5 rounded-full">En 5 dias</span><h3 class="font-bold text-lg mt-1">Almuerzo Dominguero</h3><p class="text-xs text-emerald-100">Casa de los Abuelos - 2:00 PM</p></div>
+<button type="button" id="confirm-btn" class="bg-white text-emerald-700 px-3.5 py-2 rounded-xl font-bold text-xs">Confirmar</button>
+</div>
+</div>
+</section>
+<!-- MODAL SUBIR -->
+<div id="upload-modal" class="modal fixed inset-0 bg-slate-900/60 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="upload-title">
+<div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl">
+<div class="flex justify-between items-center pb-4 border-b border-slate-100">
+<h3 id="upload-title" class="font-bold text-lg"><i class="fa-solid fa-cloud-arrow-up text-emerald-600 mr-2"></i>Compartir Recuerdo</h3>
+<button type="button" data-close-upload class="text-slate-400 p-1" aria-label="Cerrar"><i class="fa-solid fa-xmark text-lg"></i></button>
+</div>
+<form id="upload-form" class="mt-4 space-y-4">
+<div>
+<label class="block text-xs font-semibold mb-1" for="modal-photo-file">Imagen del Recuerdo</label>
+<div id="drop-zone" class="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center cursor-pointer bg-slate-50" role="button" tabindex="0" aria-label="Elegir foto">
+<i class="fa-solid fa-image text-3xl text-emerald-500 mb-2"></i>
+<p class="text-xs font-semibold">Clic para elegir foto (JPG/PNG/WEBP, max 5MB)</p>
+<input type="file" id="modal-photo-file" accept="image/jpeg,image/png,image/webp" class="hidden" />
+</div>
+<div id="image-preview-container" class="hidden mt-3 rounded-xl overflow-hidden max-h-48"><img id="image-preview" class="w-full object-cover" alt="Vista previa" /></div>
+<p id="upload-error" class="text-xs text-rose-600 mt-1" aria-live="polite"></p>
+</div>
+<div><label class="block text-xs font-semibold mb-1" for="modal-caption">Descripcion</label><textarea id="modal-caption" rows="3" maxlength="500" placeholder="Que paso en esta foto?" class="w-full p-3 border border-slate-200 rounded-xl text-xs" required></textarea></div>
+<div><label class="block text-xs font-semibold mb-1" for="modal-tag">Categoria</label><select id="modal-tag" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs"><option value="Vacaciones">Vacaciones / Viajes</option><option value="Cumpleanos">Cumpleanos / Fiestas</option><option value="Antiguas">Fotos del Recuerdo (Retro)</option><option value="Cotidiano">Dia a dia</option></select></div>
+<div class="pt-3 flex justify-end gap-2">
+<button type="button" data-close-upload class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button>
+<button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold">Publicar para la Familia</button>
+</div>
+</form>
+</div>
+</div>
+<!-- MODAL USUARIO -->
+<div id="user-modal" class="modal fixed inset-0 bg-slate-900/60 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="user-title">
+<div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl">
+<h3 id="user-title" class="font-bold text-base mb-1">Cambiar de Usuario</h3>
+<p class="text-xs text-slate-500 mb-4">Elige que familiar quieres ser:</p>
+<div id="users-selector-list" class="space-y-2"></div>
+<div class="mt-4 pt-3 border-t border-slate-100 text-right"><button type="button" data-close-user class="px-4 py-2 bg-slate-100 rounded-xl text-xs font-semibold">Cerrar</button></div>
+</div>
+</div>
+<!-- LIGHTBOX + TOAST -->
+<div id="lightbox" class="modal fixed inset-0 bg-slate-900/90 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Foto ampliada"><img id="lightbox-img" class="max-h-[85vh] max-w-full rounded-2xl shadow-2xl" alt="Foto ampliada" /><button type="button" id="lightbox-close" class="absolute top-4 right-4 text-white text-2xl p-2" aria-label="Cerrar foto"><i class="fa-solid fa-xmark"></i></button></div>
+<div id="toast-box" class="fixed bottom-5 right-5 z-50 space-y-2" aria-live="polite"></div>
+
+</main>
+</body>
+</html>
