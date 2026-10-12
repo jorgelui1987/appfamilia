@@ -31,6 +31,7 @@
 <script src="js/auth.js" defer></script>
 <script src="js/sound.js" defer></script>
 <script src="js/backend.js" defer></script>
+<script src="js/viewer.js" defer></script>
 <script src="js/pwa.js" defer></script>
 <script src="js/main.js" defer></script>
 </head>
@@ -302,7 +303,21 @@
 </div>
 </div>
 <!-- LIGHTBOX + TOAST -->
-<div id="lightbox" class="modal fixed inset-0 bg-slate-900/90 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Foto ampliada"><img id="lightbox-img" class="max-h-[85vh] max-w-full rounded-2xl shadow-2xl" alt="Foto ampliada" /><button type="button" id="lightbox-close" class="absolute top-4 right-4 text-white text-2xl p-2" aria-label="Cerrar foto"><i class="fa-solid fa-xmark"></i></button></div>
+<div id="lightbox" class="modal fixed inset-0 bg-slate-950/95 z-[80] hidden flex-col p-0" role="dialog" aria-modal="true" aria-label="Foto ampliada">
+<div class="flex items-center justify-between px-4 pt-4 pb-2 text-white" style="padding-top:calc(1rem + env(safe-area-inset-top))">
+<div class="min-w-0"><p id="lightbox-title" class="font-bold text-sm truncate">Foto</p><p id="lightbox-sub" class="text-[11px] text-slate-300 truncate"></p></div>
+<button type="button" id="lightbox-close" class="ml-3 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center" aria-label="Cerrar foto"><i class="fa-solid fa-xmark"></i></button>
+</div>
+<div id="lightbox-stage" class="flex-1 min-h-0 overflow-auto custom-scrollbar flex items-center justify-center p-3" style="touch-action:pan-x pan-y pinch-zoom">
+<img id="lightbox-img" class="rounded-2xl shadow-2xl transition-transform duration-150" style="max-width:100%;max-height:100%;transform-origin:center center" alt="Foto ampliada" />
+</div>
+<div class="flex items-center justify-center gap-2 px-4 pb-5 pt-1 text-white" style="padding-bottom:calc(1.25rem + env(safe-area-inset-bottom))">
+<button type="button" id="lb-zoom-out" class="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-lg" aria-label="Reducir zoom"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+<span id="lb-zoom-label" class="text-xs font-bold w-12 text-center">100%</span>
+<button type="button" id="lb-zoom-in" class="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-lg" aria-label="Ampliar zoom"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+<button type="button" id="lb-zoom-reset" class="h-11 px-4 rounded-full bg-white/10 hover:bg-white/20 text-xs font-bold" aria-label="Restablecer zoom">1:1</button>
+</div>
+</div>
 <button type="button" id="install-btn" class="hidden fixed bottom-24 left-4 z-50 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-3 rounded-2xl shadow-xl items-center gap-2"><i class="fa-solid fa-download"></i> Instalar app</button>
 <div id="toast-box" class="fixed bottom-24 right-4 z-50 space-y-2" aria-live="polite"></div>
 

@@ -36,17 +36,10 @@ var AppMain = (function (Store, App, AppChat, AppForms) {
       AppForms.renderUserSelector();
       AppChat.openModal('user-modal');
     });
-    document.getElementById('lightbox-close').addEventListener('click', function () {
-      AppChat.closeModal('lightbox');
-    });
-    document.getElementById('lightbox').addEventListener('click', function (e) {
-      if (e.target.id === 'lightbox') AppChat.closeModal('lightbox');
-    });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') {
         AppChat.closeModal('upload-modal');
         AppChat.closeModal('user-modal');
-        AppChat.closeModal('lightbox');
       }
     });
     var posts = document.getElementById('posts-container');
@@ -66,8 +59,23 @@ var AppMain = (function (Store, App, AppChat, AppForms) {
         return;
       }
       if (photo) {
-        document.getElementById('lightbox-img').src = photo.src;
-        AppChat.openModal('lightbox');
+        var card = photo.closest('[data-post-id]');
+        var title = 'Foto';
+        var sub = '';
+        if (card) {
+          var pid = card.dataset.postId;
+          var found = null;
+          Store.posts.forEach(function (p) { if (String(p.id) === String(pid)) found = p; });
+          if (found) {
+            title = found.caption ? String(found.caption).slice(0, 60) : 'Foto';
+            sub = (found.userName || '') + (found.timestamp ? ' · ' + found.timestamp : '');
+          }
+        }
+        if (typeof Viewer !== 'undefined') Viewer.open(photo.src, title, sub);
+        else {
+          document.getElementById('lightbox-img').src = photo.src;
+          AppChat.openModal('lightbox');
+        }
       }
     });
     var gotoChat = document.querySelector('[data-goto-chat]');
@@ -107,6 +115,7 @@ var AppMain = (function (Store, App, AppChat, AppForms) {
     Auth.bind();
     Auth.restore();
     if (typeof Sound !== 'undefined') Sound.bind();
+    if (typeof Viewer !== 'undefined') Viewer.bind();
     Extras.initTheme();
     Extras.seedStories();
     ExtrasB.restoreReacts();
