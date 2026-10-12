@@ -41,8 +41,16 @@ var App = (function (Store) {
     if (f === 'eventos') return Store.posts.filter(function (p) { return p.tag === 'Cumpleanos' || p.tag === 'Vacaciones'; });
     return Store.posts;
   }
+  // Las fotos data: (base64) no se escapan: llevan comas y '+' que se rompen con &amp;.
+  function imgSrc(url) {
+    var u = String(url || '');
+    if (u.indexOf('data:image/') === 0 || u.indexOf('blob:') === 0) return u;
+    return escapeHtml(u);
+  }
   function renderPosts() {
     var container = $('posts-container'); if (!container) return;
+    // Guarda la posicion para no saltar arriba al repintar (ej. tras comentar).
+    var scY = window.scrollY;
     container.innerHTML = '';
     var list = filteredPosts();
     var me = Store.currentUser();
@@ -50,15 +58,18 @@ var App = (function (Store) {
       container.innerHTML = '<div class="bg-white border border-dashed border-slate-300 rounded-2xl p-8 text-center text-sm text-slate-500">No hay recuerdos con este filtro. Comparte el primero.</div>';
     }
     list.forEach(function (post) {
+      post.likes = post.likes || [];
+      post.comments = post.comments || [];
       var liked = post.likes.indexOf(me.id) > -1;
       var el = document.createElement('article');
       el.className = 'bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden';
       el.dataset.postId = post.id;
+      var imgUrl = imgSrc(post.imageUrl) || 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=800&q=80';
       el.innerHTML =
         '<div class="p-4 flex items-center justify-between border-b border-slate-50">' +
-        '<div class="flex items-center gap-3"><img src="' + escapeHtml(post.userAvatar) + '" alt="" class="w-10 h-10 rounded-full object-cover border border-slate-200" loading="lazy" /><div><h4 class="font-bold text-slate-800 text-sm leading-tight">' + escapeHtml(post.userName) + '</h4><div class="flex items-center gap-2 mt-0.5"><span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-semibold">' + escapeHtml(post.userFamily) + '</span><span class="text-[10px] text-slate-400">' + escapeHtml(post.timestamp) + '</span></div></div></div>' +
+        '<div class="flex items-center gap-3"><img src="' + imgSrc(post.userAvatar) + '" alt="" class="w-10 h-10 rounded-full object-cover border border-slate-200" loading="lazy" onerror="this.style.visibility=\'hidden\'" /><div><h4 class="font-bold text-slate-800 text-sm leading-tight">' + escapeHtml(post.userName) + '</h4><div class="flex items-center gap-2 mt-0.5"><span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-semibold">' + escapeHtml(post.userFamily) + '</span><span class="text-[10px] text-slate-400">' + escapeHtml(post.timestamp) + '</span></div></div></div>' +
         '<span class="text-xs bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full font-semibold border border-emerald-100">' + escapeHtml(post.tag) + '</span></div>' +
-        '<div class="bg-slate-900 flex items-center justify-center max-h-[450px] overflow-hidden"><img src="' + escapeHtml(post.imageUrl) + '" alt="Foto: ' + escapeHtml(post.caption).slice(0, 80) + '" class="w-full object-cover feed-img cursor-pointer" loading="lazy" data-action="view-photo" /></div>' +
+        '<div class="bg-slate-900 flex items-center justify-center min-h-[220px] overflow-hidden"><img src="' + imgUrl + '" alt="Foto: ' + escapeHtml(post.caption).slice(0, 80) + '" class="w-full object-cover feed-img cursor-pointer" style="min-height:220px;background:#0f172a" loading="lazy" decoding="async" data-action="view-photo" onerror="this.closest(\'div\').innerHTML=\'<p class=\\\'text-slate-400 text-xs p-8 text-center\\\'>(Foto no disponible en este dispositivo)</p>\'" /></div>' +
         '<div class="p-4 space-y-3"><p class="text-slate-700 text-sm leading-relaxed">' + escapeHtml(post.caption) + '</p>' +
         '<div data-reacts></div>' +
         '<div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs"><button type="button" data-action="like" class="flex items-center gap-1.5 font-semibold transition ' + (liked ? 'text-rose-600' : 'text-slate-500 hover:text-rose-600') + '"><i class="' + (liked ? 'fa-solid' : 'fa-regular') + ' fa-heart text-base"></i><span>' + post.likes.length + ' Les gusta</span></button>' +
@@ -72,6 +83,8 @@ var App = (function (Store) {
     });
     $('stat-posts-count').textContent = String(Store.posts.filter(function (p) { return p.userId === me.id; }).length);
     $('stat-members-count').textContent = String(Store.users.length);
+    // Restaura el scroll: al comentar no te manda arriba.
+    try { if (typeof scY === 'number' && Math.abs(window.scrollY - scY) > 200) window.scrollTo(0, scY); } catch (e) {}
   }
-  return { $: $, escapeHtml: escapeHtml, toast: toast, switchTab: switchTab, renderPosts: renderPosts, filteredPosts: filteredPosts };
+  return { $: $, escapeHtml: escapeHtml, toast: toast, switchTab: switchTab, renderPosts: renderPosts, filteredPosts: filteredPosts, imgSrc: imgSrc };
 })(Store);

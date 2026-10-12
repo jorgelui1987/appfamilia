@@ -49,13 +49,13 @@ var AppMain = (function (Store, App, AppChat, AppForms) {
       var react = e.target.closest('[data-react]');
       if (react) {
         var rc = react.closest('[data-post-id]');
-        ExtrasB.toggleReact(Number(rc.dataset.postId), react.dataset.react);
+        ExtrasB.toggleReact(rc.dataset.postId, react.dataset.react);
         App.renderPosts();
         return;
       }
       if (likeBtn) {
         var card = likeBtn.closest('[data-post-id]');
-        Backend.toggleLike(Number(card.dataset.postId)).then(function () { App.renderPosts(); });
+        Backend.toggleLike(card.dataset.postId).then(function () { App.renderPosts(); });
         return;
       }
       if (photo) {

@@ -161,7 +161,7 @@ var AppForms = (function (Store, App, AppChat) {
         $('upload-error').textContent = 'La imagen supera 50MB.';
         return;
       }
-      compressImage(file, 1280, 0.82).then(function (dataUrl) {
+      compressImage(file, 960, 0.72).then(function (dataUrl) {
         $('image-preview').src = dataUrl;
         $('image-preview-container').classList.remove('hidden');
       }).catch(function () {

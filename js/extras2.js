@@ -7,7 +7,7 @@ var ExtrasB = (function (Store, App, Extras) {
 
   function toggleReact(postId, emoji) {
     var found = null;
-    Store.posts.forEach(function (p) { if (p.id === Number(postId)) found = p; });
+    Store.posts.forEach(function (p) { if (String(p.id) === String(postId)) found = p; });
     if (!found) return;
     if (!found.reacts) found.reacts = {};
     if (found.myReact === emoji) {
@@ -24,7 +24,7 @@ var ExtrasB = (function (Store, App, Extras) {
   function restoreReacts() {
     Extras.load('mf-reacts', []).forEach(function (sv) {
       Store.posts.forEach(function (p) {
-        if (p.id === sv.id) { p.reacts = sv.reacts; p.myReact = sv.myReact; }
+        if (String(p.id) === String(sv.id)) { p.reacts = sv.reacts; p.myReact = sv.myReact; }
       });
     });
   }

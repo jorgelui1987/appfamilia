@@ -155,8 +155,15 @@ var Backend = (function (Store) {
     if (!Store.backend.ok) return;
     try {
       const posts = (await Api.posts()).map(normalizePost);
+      // Conserva fotos locales: la nube no las conoce y si las borramos
+      // se pierden comentarios/likes hechos en este dispositivo.
+      const locals = Store.posts.filter((p) => !/^\d+$/.test(String(p.id)));
       Store.posts.length = 0;
       posts.forEach((p) => Store.posts.push(p));
+      locals.forEach((lp) => {
+        if (!Store.posts.some((p) => String(p.id) === String(lp.id))) Store.posts.push(lp);
+      });
+      loadLocalPosts();
     } catch (e) { /* conserva datos locales */ }
   }
 
@@ -185,43 +192,70 @@ var Backend = (function (Store) {
   }
 
   async function toggleLike(postId) {
-    try { await Api.like(postId, Store.state.currentUserId); await refreshPosts(); }
+    try {
+      // Solo intenta en la nube si el id es numerico (los 'local-...' no existen alla).
+      if (!/^\d+$/.test(String(postId))) throw new Error('local');
+      await Api.like(postId, Store.state.currentUserId); await refreshPosts();
+    }
     catch (e) {
       Store.posts.forEach(function (p) {
-        if (p.id !== Number(postId)) return;
+        if (String(p.id) !== String(postId)) return;
+        p.likes = p.likes || [];
         var i = p.likes.indexOf(Store.state.currentUserId);
         if (i > -1) p.likes.splice(i, 1);
         else p.likes.push(Store.state.currentUserId);
-      });
-    }
-  }
-
-  async function addComment(postId, text) {
-    try {
-      await Api.comment(postId, { userName: Store.currentUser().name, text: text });
-      await refreshPosts();
-    } catch (e) {
-      // Fallback local (sirve para fotos 'local-...' y sin servidor):
-      // compara por String porque los ids locales no son numeros.
-      Store.posts.forEach(function (p) {
-        if (String(p.id) !== String(postId)) return;
-        p.comments = p.comments || [];
-        p.comments.push({ id: Date.now(), userName: Store.currentUser().name, text: text });
       });
       saveLocalPosts();
     }
   }
 
+  async function addComment(postId, text) {
+    const me = Store.currentUser();
+    const clean = String(text).slice(0, 300);
+    // 1) Pintalo al instante (optimista) para que nunca parezca que no sirvio.
+    Store.posts.forEach(function (p) {
+      if (String(p.id) !== String(postId)) return;
+      p.comments = p.comments || [];
+      p.comments.push({ id: 'tmp-' + Date.now(), userName: me.name, text: clean });
+    });
+    // Fotos locales: solo guarda en el dispositivo.
+    if (!/^\d+$/.test(String(postId))) { saveLocalPosts(); return { local: true }; }
+    try {
+      await Api.comment(postId, { userName: me.name, text: clean });
+      await refreshPosts();
+      // Si la nube no trajo el comentario (ej. fallo silencioso), conserva el optimista.
+      let found = null;
+      Store.posts.forEach(function (p) { if (String(p.id) === String(postId)) found = p; });
+      if (found && !(found.comments || []).some((c) => c.text === clean && c.userName === me.name)) {
+        found.comments.push({ id: Date.now(), userName: me.name, text: clean });
+        saveLocalPosts();
+      }
+      return { ok: true };
+    } catch (e) {
+      // Sin servidor: queda el optimista + guarda local.
+      saveLocalPosts();
+      return { local: true };
+    }
+  }
+
   function saveLocalPosts() {
     try {
-      const slim = Store.posts.slice(0, 30).map((p) => ({
+      // Guarda max 12 fotos locales (las data: pesan MBs y llenan el localStorage
+      // -> ahi las fotos se ponian en blanco al bajar). Recorta imagenes gigantes.
+      const slim = Store.posts.filter((p) => p.local || !/^\d+$/.test(String(p.id))).slice(0, 12).map((p) => ({
         id: p.id, userId: p.userId, userName: p.userName, userFamily: p.userFamily,
-        userAvatar: String(p.userAvatar || '').slice(0, 200000),
-        imageUrl: String(p.imageUrl || '').slice(0, 2000000),
+        userAvatar: String(p.userAvatar || '').slice(0, 20000),
+        imageUrl: String(p.imageUrl || '').slice(0, 350000),
         caption: p.caption, tag: p.tag, timestamp: p.timestamp, likes: p.likes || [],
-        comments: p.comments || [], local: true
+        comments: (p.comments || []).slice(-20), local: true
       }));
-      localStorage.setItem('mf-local-posts', JSON.stringify(slim));
+      try {
+        localStorage.setItem('mf-local-posts', JSON.stringify(slim));
+      } catch (e) {
+        // Cuota llena: guarda sin imagenes (texto + comentarios) antes que perder todo.
+        const tiny = slim.map((p) => ({ ...p, imageUrl: '', userAvatar: '' }));
+        try { localStorage.setItem('mf-local-posts', JSON.stringify(tiny)); } catch (e2) {}
+      }
     } catch (e) {}
   }
 
