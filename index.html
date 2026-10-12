@@ -17,6 +17,9 @@
 <script src="js/store.js" defer></script>
 <script src="js/api.js" defer></script>
 <script src="js/app.js" defer></script>
+<script src="js/extras.js" defer></script>
+<script src="js/extras2.js" defer></script>
+<script src="js/extras3.js" defer></script>
 <script src="js/chat.js" defer></script>
 <script src="js/forms.js" defer></script>
 <script src="js/backend.js" defer></script>
@@ -36,8 +39,15 @@
 <button type="button" data-tab="chat" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:bg-slate-800">Chat Familiar</button>
 <button type="button" data-tab="members" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:bg-slate-800">Familias</button>
 <button type="button" data-tab="calendar" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:bg-slate-800">Cumpleanos</button>
+<button type="button" data-tab="fun" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:bg-slate-800">Diversion</button>
 </nav>
+<div class="hidden lg:block relative" id="search-wrap">
+<label class="sr-only" for="global-search">Buscar en MiFamilia</label>
+<input id="global-search" type="text" placeholder="Buscar fotos o familia..." autocomplete="off" class="w-56 px-4 py-2 bg-slate-800 border border-slate-700 rounded-full text-xs text-white placeholder-slate-400" />
+<div id="search-results" class="hidden absolute top-11 left-0 w-72 bg-white rounded-xl shadow-xl border border-slate-200 p-2 max-h-80 overflow-y-auto custom-scrollbar"></div>
+</div>
 <div class="flex items-center gap-3">
+<button type="button" id="theme-btn" class="p-2 bg-slate-800 rounded-full border border-slate-700 text-sm" aria-label="Cambiar modo oscuro/claro"><i class="fa-solid fa-moon"></i></button>
 <div class="text-right hidden sm:block"><p id="current-user-name" class="text-sm font-semibold leading-tight">Papa (Carlos)</p><p id="current-user-family" class="text-xs text-emerald-400">Familia Castro</p></div>
 <button type="button" id="user-switch-btn" class="p-1 bg-slate-800 rounded-full border border-slate-700" aria-label="Cambiar de familiar" aria-haspopup="dialog"><img id="current-user-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" class="w-9 h-9 rounded-full object-cover" alt="Foto de perfil actual" /></button>
 </div>
@@ -75,6 +85,10 @@
 <button type="button" data-open-upload class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-2xl shadow-lg transition active:scale-95"><i class="fa-solid fa-cloud-arrow-up mr-2"></i>Compartir un nuevo recuerdo</button>
 </div>
 <div class="lg:col-span-2 space-y-6">
+<div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+<h4 class="font-bold text-xs mb-3 text-slate-500 uppercase tracking-wide">Historias (24h)</h4>
+<div id="stories-bar" class="flex gap-3 overflow-x-auto custom-scrollbar pb-1"></div>
+</div>
 <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-3">
 <img id="post-box-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" class="w-10 h-10 rounded-full object-cover" alt="" />
 <button type="button" data-open-upload class="flex-1 bg-slate-100 text-slate-500 text-left px-4 py-2.5 rounded-full text-sm">Que recuerdo quieres compartir hoy?</button>
@@ -129,6 +143,21 @@
 </div>
 </div>
 </section>
+<!-- DIVERSION: encuestas + insignias -->
+<section id="tab-fun-view" class="tab-content hidden flex-1 overflow-y-auto custom-scrollbar space-y-6" aria-label="Diversion familiar">
+<div class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-6 rounded-2xl shadow-sm flex justify-between items-center flex-wrap gap-3">
+<div><h2 class="font-bold text-xl">Zona de Diversion Familiar</h2><p class="text-emerald-100 text-sm">Encuestas, insignias y celebraciones</p></div>
+<button type="button" id="party-btn" class="bg-white text-emerald-700 px-4 py-2.5 rounded-xl font-bold text-sm">Celebrar</button>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<div id="polls-box" class="space-y-4"></div>
+<div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+<h4 class="font-bold text-sm mb-3"><i class="fa-solid fa-award text-amber-500 mr-2"></i>Mis Insignias</h4>
+<div id="badges-box" class="grid grid-cols-4 gap-2"></div>
+<p class="text-[11px] text-slate-400 mt-3">Publica, vota y comenta para desbloquearlas.</p>
+</div>
+</div>
+</section>
 <!-- MODAL SUBIR -->
 <div id="upload-modal" class="modal fixed inset-0 bg-slate-900/60 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="upload-title">
 <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl">
@@ -163,6 +192,15 @@
 <p class="text-xs text-slate-500 mb-4">Elige que familiar quieres ser:</p>
 <div id="users-selector-list" class="space-y-2"></div>
 <div class="mt-4 pt-3 border-t border-slate-100 text-right"><button type="button" data-close-user class="px-4 py-2 bg-slate-100 rounded-xl text-xs font-semibold">Cerrar</button></div>
+</div>
+</div>
+<!-- STORY MODAL -->
+<div id="story-modal" class="modal fixed inset-0 bg-slate-900/90 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Historia">
+<div class="relative w-full max-w-sm bg-slate-900 rounded-3xl overflow-hidden shadow-2xl">
+<div class="h-1 bg-white/20"><div class="story-progress h-full bg-emerald-400" style="width:0;transition:width 5s linear"></div></div>
+<img id="story-img" class="w-full h-96 object-cover" alt="Historia" />
+<div class="p-4 text-white"><p id="story-user" class="font-bold text-sm"></p><p id="story-text" class="text-xs text-slate-300"></p></div>
+<button type="button" id="story-close" class="absolute top-3 right-3 text-white text-xl p-2" aria-label="Cerrar historia"><i class="fa-solid fa-xmark"></i></button>
 </div>
 </div>
 <!-- LIGHTBOX + TOAST -->

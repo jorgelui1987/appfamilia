@@ -53,6 +53,13 @@ var AppMain = (function (Store, App, AppChat, AppForms) {
     posts.addEventListener('click', function (e) {
       var likeBtn = e.target.closest('[data-action="like"]');
       var photo = e.target.closest('[data-action="view-photo"]');
+      var react = e.target.closest('[data-react]');
+      if (react) {
+        var rc = react.closest('[data-post-id]');
+        ExtrasB.toggleReact(Number(rc.dataset.postId), react.dataset.react);
+        App.renderPosts();
+        return;
+      }
       if (likeBtn) {
         var card = likeBtn.closest('[data-post-id]');
         Backend.toggleLike(Number(card.dataset.postId)).then(function () { App.renderPosts(); });
@@ -71,19 +78,51 @@ var AppMain = (function (Store, App, AppChat, AppForms) {
     if (evBtn) evBtn.addEventListener('click', function () { App.toast('Proximamente: crear evento'); });
     var confirm = document.getElementById('confirm-btn');
     if (confirm) confirm.addEventListener('click', function () { App.toast('Asistencia confirmada'); });
+    var party = document.getElementById('party-btn');
+    if (party) party.addEventListener('click', function () { ExtrasC.confetti(120); ExtrasC.award('fiestero', 'Has celebrado con la familia'); });
+    var storiesBar = document.getElementById('stories-bar');
+    if (storiesBar) storiesBar.addEventListener('click', function (e) {
+      var s = e.target.closest('[data-story]');
+      if (s) { Extras.openStory(s.dataset.story); return; }
+      if (e.target.closest('#story-add')) { Extras.addStory('https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=600&q=70', 'Mi nueva historia'); App.toast('Historia publicada por 24h'); }
+    });
+    var storyClose = document.getElementById('story-close');
+    if (storyClose) storyClose.addEventListener('click', Extras.closeStory);
+    var storyModal = document.getElementById('story-modal');
+    if (storyModal) storyModal.addEventListener('click', function (e) { if (e.target.id === 'story-modal') Extras.closeStory(); });
+    var pollsBox = document.getElementById('polls-box');
+    if (pollsBox) pollsBox.addEventListener('click', function (e) {
+      var v = e.target.closest('[data-vote]');
+      if (!v) return;
+      var card = v.closest('[data-poll]');
+      ExtrasB.vote(card.dataset.poll, Number(v.dataset.vote));
+      ExtrasC.award('votante', 'Has votado en una encuesta familiar');
+    });
   }
   function init() {
     bindGlobal();
     AppChat.bindChat();
     AppForms.bindForms();
+    Extras.initTheme();
+    Extras.seedStories();
+    ExtrasB.restoreReacts();
+    ExtrasB.seedPolls();
+    ExtrasC.seedBadges();
+    ExtrasC.bindSearch();
     AppForms.updateUserUI();
     App.renderPosts();
+    Extras.renderStories();
+    ExtrasB.renderPolls();
+    ExtrasC.renderBadges();
     AppChat.renderChannels();
     AppChat.renderMessages();
     AppForms.renderFamilies();
     Backend.load().then(function () {
       AppForms.updateUserUI();
       App.renderPosts();
+      Extras.renderStories();
+      ExtrasB.renderPolls();
+      ExtrasC.renderBadges();
       AppChat.renderChannels();
       AppChat.renderMessages();
       AppForms.renderFamilies();
