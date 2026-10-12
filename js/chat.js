@@ -246,6 +246,13 @@ var AppChat = (function (Store, App) {
 
   function notifyIncoming(channelId, text) {
     try {
+      // Si ya estas viendo ese chat, no avises (ya lo estas leyendo).
+      var inChat = false;
+      try {
+        var view = $('tab-chat-view');
+        inChat = view && !view.classList.contains('hidden') && String(Store.state.activeChatId) === String(channelId);
+      } catch (e) {}
+      if (inChat) return;
       var ch = null;
       Store.channels.forEach(function (c) { if (String(c.id) === String(channelId)) ch = c; });
       var msgs = Store.messages[channelId] || [];
@@ -346,10 +353,17 @@ var AppChat = (function (Store, App) {
         if (now !== lastCount) {
           lastCount = now;
           renderMessages();
-          // Avisa si el ultimo mensaje es de otro familiar.
+          // Avisa solo si NO estas viendo ese chat y es de otro familiar.
+          // Si ya lo leiste antes, no repitas el aviso.
           var msgs = Store.messages[id] || [];
           var last = msgs[msgs.length - 1];
-          if (last && last.sender !== Store.currentUser().name) {
+          var viewing = false;
+          try {
+            var v = $('tab-chat-view');
+            viewing = v && !v.classList.contains('hidden') && String(Store.state.activeChatId) === String(id);
+          } catch (e) {}
+          if (!viewing && last && last.sender !== Store.currentUser().name && !wasSeen(id, last)) {
+            markSeen(id, last);
             App.toast('Nuevo mensaje de ' + last.sender.split(' ')[0]);
             if (typeof Sound !== 'undefined') Sound.play();
             try { if (navigator.vibrate) navigator.vibrate(80); } catch (e) {}
@@ -391,7 +405,8 @@ var AppChat = (function (Store, App) {
               renderMessages();
               var msgs = Store.messages[id] || [];
               var last = msgs[msgs.length - 1];
-              if (last && last.sender !== Store.currentUser().name) {
+              if (last && last.sender !== Store.currentUser().name && !wasSeen(id, last)) {
+                markSeen(id, last);
                 App.toast('Nuevo mensaje de ' + last.sender.split(' ')[0]);
                 try { if (typeof Sound !== 'undefined') Sound.play(); } catch (e) {}
                 try { if (navigator.vibrate) navigator.vibrate(80); } catch (e) {}
@@ -422,6 +437,12 @@ var AppChat = (function (Store, App) {
 
   function selectChannel(id) {
     Store.state.activeChatId = id;
+    // Lo abriste = ya lo leiste: no volver a avisar de estos mensajes.
+    try {
+      var msgs = Store.messages[id] || [];
+      var last = msgs[msgs.length - 1];
+      if (last) markSeen(id, last);
+    } catch (e) {}
     var ch = null;
     Store.channels.forEach(function (c) { if (c.id === id) ch = c; });
     if (ch) {

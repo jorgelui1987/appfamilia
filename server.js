@@ -51,10 +51,16 @@ async function initDb() {
   if (c.rows[0].n === 0) {
     await d.query(
       "INSERT INTO channels (id,name,subtitle,type,icon,color) VALUES " +
-      "('gen','Chat General Familiar','Todos los integrantes','group','fa-users','bg-emerald-600')," +
-      "('primos','Solo Primos','Lucas, Sofia y Mateo','group','fa-comments','bg-purple-600')"
+      "('gen','Chat General Familiar','Todos los integrantes','group','fa-users','bg-emerald-600')"
     );
   }
+  // Limpieza: quita el grupo viejo 'Solo Primos' si quedo en la nube.
+  try {
+    await d.query("DELETE FROM messages WHERE channel_id='primos'");
+  } catch (e) {}
+  try {
+    await d.query("DELETE FROM channels WHERE id='primos'");
+  } catch (e) {}
   const p = await d.query('SELECT COUNT(*)::int AS n FROM posts');
   if (p.rows[0].n === 0) {
     const r = await d.query(

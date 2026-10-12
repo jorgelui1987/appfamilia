@@ -74,9 +74,11 @@ var Backend = (function (Store) {
         posts.map(normalizePost).forEach((p) => Store.posts.push(p));
       }
       if (channels && channels.length) {
+        // Grupo viejo eliminado: nunca mostrar 'primos' aunque siga en la nube.
+        const clean = channels.filter((c) => String(c.id) !== 'primos');
         const keepDM = Store.channels.filter((c) => c.dm);
         Store.channels.length = 0;
-        channels.forEach((c) => {
+        clean.forEach((c) => {
           if (String(c.id).startsWith('dm-')) c.dm = true;
           Store.channels.push(c);
         });
@@ -85,9 +87,9 @@ var Backend = (function (Store) {
           const exists = Store.channels.some((c) => String(c.id) === String(dm.id));
           if (!exists) Store.channels.push(dm);
         });
-        const ids = channels.map((c) => c.id);
+        const ids = clean.map((c) => c.id);
         if (ids.indexOf(Store.state.activeChatId) === -1) Store.state.activeChatId = ids[0];
-        for (const c of channels) {
+        for (const c of clean) {
           try {
             const srv = await Api.messages(c.id);
             Store.messages[c.id] = srv;
