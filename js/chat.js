@@ -56,7 +56,12 @@ var AppChat = (function (Store, App) {
   function restoreDMs() {
     try {
       var saved = JSON.parse(localStorage.getItem('mf-dm-channels') || '[]');
-      saved.forEach(function (id) {
+      // Limpia basura vieja: ids que no son dm-A-B (ej. 'maria') se borran.
+      var cleaned = saved.filter(function (id) { return /^dm-(\d+)-(\d+)$/.test(String(id)); });
+      if (cleaned.length !== saved.length) {
+        try { localStorage.setItem('mf-dm-channels', JSON.stringify(cleaned)); } catch (e) {}
+      }
+      cleaned.forEach(function (id) {
         var m = /^dm-(\d+)-(\d+)$/.exec(id);
         if (!m) return;
         var me = Store.state.currentUserId;
@@ -122,15 +127,23 @@ var AppChat = (function (Store, App) {
     var chans = Store.channels.filter(function (c) {
       if (!c.dm) return true;
       var pid = c.peerId != null ? c.peerId : peerOf(c.id);
-      // Legacy sin peerId ('maria', etc.): resuelvelo por nombre 1 sola vez.
+      // Legacy sin peerId ('maria', 'Tia Maria', etc.): resuelvelo por nombre.
+      // Compara tambien sin 'Tia/Tio/Papa/Mama' para que 'Tia Maria' -> Maria Perez.
       if (pid == null && String(c.id).indexOf('dm-') !== 0) {
         var byName = null;
+        var cname = String(c.name || '').toLowerCase();
         Store.users.forEach(function (u) {
-          if (String(u.name).toLowerCase() === String(c.name || '').toLowerCase()) byName = u;
+          var uname = String(u.name || '').toLowerCase();
+          if (uname === cname) byName = u;
+          else {
+            var first = uname.split(' ')[0];
+            var cfirst = cname.replace(/^(tia|tio|papa|mama|abuela|abuelo|primo|prima)\s+/i, '').split(' ')[0];
+            if (first && cfirst && (cname.indexOf(first) > -1 || uname.indexOf(cfirst) > -1)) byName = u;
+          }
         });
         if (byName) { c.peerId = byName.id; pid = byName.id; }
       }
-      if (pid == null) return true;
+      if (pid == null) return false;
       if (String(pid) === meId) return false;
       var m = /^dm-(\d+)-(\d+)$/.exec(String(c.id));
       if (m) {

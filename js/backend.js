@@ -67,6 +67,29 @@ var Backend = (function (Store) {
           if (!ex) Store.users.push(u);
           else { ex.name = u.name; ex.role = u.role; ex.family = u.family; ex.avatar = u.avatar; }
         });
+        // Dedupe usuarios por nombre (ej. 'Carlos' local + 'Carlos Castro' nube):
+        // fusiona al de id menor y deja 1 por persona para no duplicar privados.
+        try {
+          const seenName = {};
+          const dupIds = [];
+          Store.users.forEach((u) => {
+            const k = String(u.name || '').trim().toLowerCase();
+            if (!k) return;
+            if (!seenName[k]) seenName[k] = u;
+            else {
+              const keep = Number(seenName[k].id) <= Number(u.id) ? seenName[k] : u;
+              const drop = keep === seenName[k] ? u : seenName[k];
+              seenName[k] = keep;
+              dupIds.push(String(drop.id));
+              if (String(Store.state.currentUserId) === String(drop.id)) Store.state.currentUserId = keep.id;
+            }
+          });
+          if (dupIds.length) {
+            for (let i = Store.users.length - 1; i >= 0; i--) {
+              if (dupIds.indexOf(String(Store.users[i].id)) > -1) Store.users.splice(i, 1);
+            }
+          }
+        } catch (e) {}
         if (!Store.getUser(Store.state.currentUserId)) Store.state.currentUserId = Store.users[0].id;
       }
       if (posts) {
@@ -76,12 +99,19 @@ var Backend = (function (Store) {
       if (channels && channels.length) {
         // Grupo viejo eliminado: nunca mostrar 'primos' aunque siga en la nube.
         const clean = channels.filter((c) => String(c.id) !== 'primos');
-        const keepDM = Store.channels.filter((c) => c.dm);
+        const keepDM = Store.channels.filter((c) => c.dm && /^dm-(\d+)-(\d+)$/.test(String(c.id)));
         Store.channels.length = 0;
         clean.forEach((c) => {
           if (String(c.id).startsWith('dm-')) c.dm = true;
           Store.channels.push(c);
         });
+        // Legacy viejo ('maria','Tia Maria'...): NO reponerlo, ya hay dm-A-B.
+        // Limpia tambien mensajes locales huerfanos de esos ids.
+        try {
+          Object.keys(Store.messages || {}).forEach((k) => {
+            if (k === 'primos' || (k === 'maria' && !clean.some((c) => String(c.id) === 'maria'))) delete Store.messages[k];
+          });
+        } catch (e) {}
         // Repone los DM locales que el servidor aun no conoce.
         keepDM.forEach((dm) => {
           const exists = Store.channels.some((c) => String(c.id) === String(dm.id));
