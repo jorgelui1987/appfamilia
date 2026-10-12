@@ -68,5 +68,5 @@ var Store = (function () {
   function getUser(id) { return users.find(function (u) { return u.id === id; }); }
   function currentUser() { return getUser(state.currentUserId); }
 
-  return { users: users, posts: posts, channels: channels, messages: messages, state: state, getUser: getUser, currentUser: currentUser };
+  return { users: users, posts: posts, channels: channels, messages: messages, state: state, backend: { ok: false }, getUser: getUser, currentUser: currentUser };
 })();

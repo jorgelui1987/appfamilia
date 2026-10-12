@@ -70,6 +70,7 @@ var AppChat = (function (Store, App) {
     }
     renderChannels();
     renderMessages();
+    Backend.refreshMessages(id).then(renderMessages);
   }
 
   function nowTime() {
@@ -91,15 +92,9 @@ var AppChat = (function (Store, App) {
       var text = input.value.trim();
       if (!text) return;
       var id = Store.state.activeChatId;
-      Store.messages[id] = Store.messages[id] || [];
-      var t = nowTime();
-      Store.messages[id].push({ sender: Store.currentUser().name, text: text.slice(0, 500), time: t });
       input.value = '';
+      Backend.sendMessage(id, text.slice(0, 500)).then(renderMessages);
       renderMessages();
-      setTimeout(function () {
-        Store.messages[id].push({ sender: 'Tia Maria', text: 'Recibido. Nos vemos pronto.', time: t });
-        if (Store.state.activeChatId === id) renderMessages();
-      }, 1500);
     });
     $('chat-photo-btn').addEventListener('click', function () {
       App.toast('Adjunta una foto desde el muro con Compartir recuerdo');

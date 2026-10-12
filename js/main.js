@@ -55,13 +55,7 @@ var AppMain = (function (Store, App, AppChat, AppForms) {
       var photo = e.target.closest('[data-action="view-photo"]');
       if (likeBtn) {
         var card = likeBtn.closest('[data-post-id]');
-        Store.posts.forEach(function (p) {
-          if (p.id !== Number(card.dataset.postId)) return;
-          var i = p.likes.indexOf(Store.state.currentUserId);
-          if (i > -1) p.likes.splice(i, 1);
-          else p.likes.push(Store.state.currentUserId);
-        });
-        App.renderPosts();
+        Backend.toggleLike(Number(card.dataset.postId)).then(function () { App.renderPosts(); });
         return;
       }
       if (photo) {
@@ -79,14 +73,21 @@ var AppMain = (function (Store, App, AppChat, AppForms) {
     if (confirm) confirm.addEventListener('click', function () { App.toast('Asistencia confirmada'); });
   }
   function init() {
+    bindGlobal();
+    AppChat.bindChat();
+    AppForms.bindForms();
     AppForms.updateUserUI();
     App.renderPosts();
     AppChat.renderChannels();
     AppChat.renderMessages();
     AppForms.renderFamilies();
-    bindGlobal();
-    AppChat.bindChat();
-    AppForms.bindForms();
+    Backend.load().then(function () {
+      AppForms.updateUserUI();
+      App.renderPosts();
+      AppChat.renderChannels();
+      AppChat.renderMessages();
+      AppForms.renderFamilies();
+    });
   }
   return { init: init };
 })(Store, App, AppChat, AppForms);

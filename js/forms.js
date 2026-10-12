@@ -69,10 +69,7 @@ var AppForms = (function (Store, App, AppChat) {
       var text = input.value.trim();
       if (!text) return;
       var card = f.closest('[data-post-id]');
-      var found = null;
-      Store.posts.forEach(function (p) { if (p.id === Number(card.dataset.postId)) found = p; });
-      if (found) found.comments.push({ id: Date.now(), userName: Store.currentUser().name, text: text.slice(0, 300) });
-      App.renderPosts();
+      Backend.addComment(Number(card.dataset.postId), text.slice(0, 300)).then(function () { App.renderPosts(); });
     });
     var drop = $('drop-zone');
     var fileInput = $('modal-photo-file');
@@ -107,17 +104,25 @@ var AppForms = (function (Store, App, AppChat) {
         return;
       }
       var me = Store.currentUser();
-      Store.posts.unshift({
-        id: Date.now(), userId: me.id, userName: me.name, userFamily: me.family, userAvatar: me.avatar,
-        imageUrl: $('image-preview').src || 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=800&q=80',
-        caption: caption.slice(0, 500), tag: $('modal-tag').value, timestamp: 'Justo ahora', likes: [], comments: []
+      var btn = e.target.querySelector('button[type="submit"]');
+      if (btn) { btn.disabled = true; btn.textContent = 'Publicando...'; }
+      Backend.createPost({
+        userId: me.id,
+        caption: caption.slice(0, 500),
+        tag: $('modal-tag').value,
+        imageUrl: $('image-preview').src || ''
+      }).then(function () {
+        AppChat.closeModal('upload-modal');
+        e.target.reset();
+        $('image-preview-container').classList.add('hidden');
+        App.switchTab('feed');
+        App.renderPosts();
+        App.toast('Recuerdo publicado y guardado en la base de datos');
+      }).catch(function (err) {
+        $('upload-error').textContent = 'No se pudo guardar: ' + err.message;
+      }).then(function () {
+        if (btn) { btn.disabled = false; btn.textContent = 'Publicar para la Familia'; }
       });
-      AppChat.closeModal('upload-modal');
-      e.target.reset();
-      $('image-preview-container').classList.add('hidden');
-      App.switchTab('feed');
-      App.renderPosts();
-      App.toast('Recuerdo publicado para la familia');
     });
   }
 

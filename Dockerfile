@@ -1,7 +1,11 @@
-FROM nginx:1.27-alpine
-COPY index.html /usr/share/nginx/html/index.html
-COPY css/ /usr/share/nginx/html/css/
-COPY js/ /usr/share/nginx/html/js/
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+FROM node:20-alpine
+WORKDIR /app
+COPY package.json ./
+RUN npm install --omit=dev
+COPY index.html server.js db.js schema.sql ./
+COPY css/ ./css/
+COPY js/ ./js/
+ENV PORT=3000
+EXPOSE 3000
+CMD ["node", "server.js"]
+
