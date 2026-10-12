@@ -63,11 +63,48 @@ var AppChat = (function (Store, App) {
       var el = document.createElement('div');
       el.className = 'flex flex-col ' + (isMe ? 'items-end' : 'items-start');
       var head = isMe ? '' : '<span class="block font-bold text-emerald-600 text-[11px] mb-1">' + escapeHtml(m.sender) + '</span>';
-      el.innerHTML = '<div class="max-w-[80%] rounded-2xl p-3 shadow-sm text-xs ' + (isMe ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 rounded-tl-none') + '">' + head + '<p class="leading-relaxed"></p><span class="block text-[9px] text-right mt-1 ' + (isMe ? 'text-emerald-200' : 'text-slate-400') + '">' + escapeHtml(m.time) + '</span></div>';
+      el.innerHTML = '<div class="max-w-[80%] rounded-2xl p-3 shadow-sm text-xs fade-in ' + (isMe ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 rounded-tl-none') + '">' + head + '<p class="leading-relaxed"></p><span class="block text-[9px] text-right mt-1 ' + (isMe ? 'text-emerald-200' : 'text-slate-400') + '">' + escapeHtml(m.time) + '</span></div>';
       el.querySelector('p').textContent = m.text;
       box.appendChild(el);
     });
     box.scrollTop = box.scrollHeight;
+  }
+
+  var pollTimer = null;
+  var lastCount = 0;
+
+  function fingerprint(id) {
+    var msgs = Store.messages[id] || [];
+    return msgs.length + '|' + (msgs.length ? String(msgs[msgs.length - 1].text).slice(0, 40) : '');
+  }
+
+  function startPolling() {
+    stopPolling();
+    lastCount = fingerprint(Store.state.activeChatId);
+    pollTimer = setInterval(function () {
+      // Solo actualiza si estas en la pestana Chat y hay servidor.
+      var view = $('tab-chat-view');
+      if (!view || view.classList.contains('hidden')) return;
+      if (!Store.backend.ok) return;
+      var id = Store.state.activeChatId;
+      Backend.refreshMessages(id).then(function () {
+        var now = fingerprint(id);
+        if (now !== lastCount) {
+          lastCount = now;
+          renderMessages();
+          // Avisa si el ultimo mensaje es de otro familiar.
+          var msgs = Store.messages[id] || [];
+          var last = msgs[msgs.length - 1];
+          if (last && last.sender !== Store.currentUser().name) {
+            App.toast('Nuevo mensaje de ' + last.sender.split(' ')[0]);
+          }
+        }
+      });
+    }, 5000);
+  }
+
+  function stopPolling() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
   }
 
   function showConvOnMobile() {
@@ -100,7 +137,12 @@ var AppChat = (function (Store, App) {
     renderChannels();
     renderMessages();
     showConvOnMobile();
-    Backend.refreshMessages(id).then(renderMessages);
+    lastCount = fingerprint(id);
+    startPolling();
+    Backend.refreshMessages(id).then(function () {
+      lastCount = fingerprint(id);
+      renderMessages();
+    });
   }
 
   function nowTime() {
@@ -126,12 +168,14 @@ var AppChat = (function (Store, App) {
       input.focus();
       Backend.sendMessage(id, text.slice(0, 500)).then(function () {
         renderMessages();
+        lastCount = fingerprint(id);
         if (!Store.backend.ok) App.toast('Mensaje guardado en este dispositivo (sin servidor)');
       });
       renderMessages();
     });
     var back = $('chat-back-btn');
     if (back) back.addEventListener('click', showListOnMobile);
+    startPolling();
     var quick = $('quick-chat-btn');
     if (quick) quick.addEventListener('click', function () {
       App.switchTab('chat');
