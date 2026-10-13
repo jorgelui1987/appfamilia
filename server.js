@@ -157,14 +157,16 @@ app.post('/api/auth/seed-admin', async (req, res) => {
   try {
     const b = req.body || {};
     const name = String(b.name || 'Admin').trim().slice(0, 80) || 'Admin';
-    const digits = String(b.phone || '56982209690').replace(/\D/g, '').slice(0, 15);
     const pass = String(b.password || '');
     const birthdate = String(b.birthdate || '1980-01-01').slice(0, 10);
     const family = String(b.family || 'Mi Familia').trim().slice(0, 80) || 'Mi Familia';
     if (pass.length < 6) return res.status(400).json({ error: 'Contrasena minimo 6 caracteres' });
-    const np = normPhone('+569', digits.replace(/^569/, ''));
-    if (np.phone.replace(/\s/g, '') !== '+56982209690') return res.status(403).json({ error: 'Solo el numero del admin.' });
     const d = getDb();
+    // Acepta el admin aunque venga con espacios, con +56 o +569: basta que termine en 82209690.
+    const allDigits = String(b.prefix || '') + ' ' + String(b.phone || '');
+    const onlyDigits = allDigits.replace(/\D/g, '');
+    if (!onlyDigits.endsWith('82209690')) return res.status(403).json({ error: 'Solo el numero del admin (+569 82209690).' });
+    const np = { phone: '+569 82209690', digits: '82209690' };
     const ex = (await d.query('SELECT id FROM users WHERE phone=$1', [np.phone])).rows[0];
     if (ex) {
       await d.query('UPDATE users SET is_admin=1 WHERE id=$1', [ex.id]);

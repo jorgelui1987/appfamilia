@@ -192,19 +192,25 @@ var Auth = (function (Store, App, AppChat) {
       var msg = 'Hola admin MiFamilia, olvide mi clave. Soy ' + (phone ? phone : '(mi numero)') + '. Ayudame con una clave temporal.';
       location.href = 'https://wa.me/56982209690?text=' + encodeURIComponent(msg);
     });
-    // Crear el acceso del admin la primera vez (si aun no existe en la nube).
+    // Crear el acceso del admin la primera vez (usa fijo +569 82209690, solo pide clave).
     var seed = $('auth-seed-admin');
     if (seed) seed.addEventListener('click', function () {
-      var prefix = $('auth-prefix').value;
-      var phone = $('auth-phone').value;
       var pass = $('auth-pass').value;
       var btn = seed;
       btn.disabled = true;
       var old = btn.textContent;
       btn.textContent = 'Creando admin...';
       function done(t) { btn.disabled = false; btn.textContent = old; if (t) $('auth-error').textContent = t; }
-      Api.seedAdmin({ name: 'Admin', prefix: prefix, phone: phone, password: pass, birthdate: '1980-01-01', family: 'Mi Familia' }).then(function (r) {
+      Api.seedAdmin({ name: 'Admin', prefix: '+569', phone: '82209690', password: pass, birthdate: '1980-01-01', family: 'Mi Familia' }).then(function (r) {
         done('');
+        // Deja el login listo para entrar con el admin.
+        try {
+          var sel = $('auth-prefix');
+          for (var i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].value === '+569') { sel.selectedIndex = i; break; }
+          }
+          $('auth-phone').value = '82209690';
+        } catch (e) {}
         App.toast(r.created ? 'Admin creado. Ahora toca Entrar' : 'Admin ya existia. Toca Entrar');
       }).catch(function (err) {
         var m = String((err && err.message) || err);
