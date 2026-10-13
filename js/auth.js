@@ -200,14 +200,7 @@ var Auth = (function (Store, App, AppChat) {
       $('auth-error').textContent = '';
       App.toast('Creando acceso admin...');
       Api.seedAdmin({ name: 'Admin', prefix: '+569', phone: '82209690', password: pass, birthdate: '1980-01-01', family: 'Mi Familia' }).then(function (r) {
-        try {
-          var sel = $('auth-prefix');
-          for (var i = 0; i < sel.options.length; i++) {
-            if (sel.options[i].value === '+569') { sel.selectedIndex = i; break; }
-          }
-          $('auth-phone').value = '82209690';
-        } catch (e) {}
-        App.toast(r.created ? 'Admin creado. Ahora toca Entrar' : 'Admin ya existia. Toca Entrar');
+        App.toast(r.created ? 'Admin creado. Ahora toca Entrar con +569 82209690' : 'Admin ya existia. Entra con +569 82209690');
       }).catch(function (err) {
         var m = String((err && err.message) || err);
         var j = null;
