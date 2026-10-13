@@ -382,7 +382,6 @@ var Auth = (function (Store, App, AppChat) {
           done();
           $('auth-error').textContent = cleanErr(err.message);
         });
-        });
       }
     });
   }
