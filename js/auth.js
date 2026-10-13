@@ -87,13 +87,25 @@ var Auth = (function (Store, App, AppChat) {
   }
 
   function bindAvatar() {
-    var btn = $('auth-avatar-btn');
+    var cam = $('auth-avatar-camera');
+    var gal = $('auth-avatar-gallery');
+    var oldBtn = $('auth-avatar-btn');
     var file = $('auth-avatar-file');
     var preview = $('auth-avatar-preview');
     var clear = $('auth-avatar-clear');
     var err = $('auth-avatar-error');
-    if (!btn || !file) return;
-    btn.addEventListener('click', function () { file.click(); });
+    if (!file) return;
+    // Camara: pide foto nueva. Galeria: deja elegir la guardada en el celu.
+    if (cam) cam.addEventListener('click', function () {
+      file.removeAttribute('capture');
+      file.setAttribute('capture', 'user');
+      file.click();
+    });
+    if (gal) gal.addEventListener('click', function () {
+      file.removeAttribute('capture');
+      file.click();
+    });
+    if (oldBtn) oldBtn.addEventListener('click', function () { file.click(); });
     file.addEventListener('change', function () {
       var f = file.files[0];
       if (!f) return;
@@ -112,7 +124,6 @@ var Auth = (function (Store, App, AppChat) {
         preview.src = dataUrl;
         preview.classList.remove('hidden');
         clear.classList.remove('hidden');
-        btn.innerHTML = '<i class="fa-solid fa-camera mr-2 text-emerald-600"></i>Cambiar foto';
       }).catch(function () {
         err.textContent = 'No se pudo leer esa foto. Prueba con otra.';
       });
@@ -120,10 +131,10 @@ var Auth = (function (Store, App, AppChat) {
     clear.addEventListener('click', function () {
       avatarData = '';
       file.value = '';
+      file.removeAttribute('capture');
       preview.src = '';
       preview.classList.add('hidden');
       clear.classList.add('hidden');
-      btn.innerHTML = '<i class="fa-solid fa-camera mr-2 text-emerald-600"></i>Tomar foto o elegir de galeria';
     });
   }
 

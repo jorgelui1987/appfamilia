@@ -240,8 +240,9 @@
 <span class="block text-xs font-semibold mb-1">Foto de perfil (opcional)</span>
 <div class="flex items-center gap-3">
 <img id="auth-avatar-preview" src="" alt="Vista previa de tu foto de perfil" class="hidden w-14 h-14 rounded-full object-cover border-2 border-emerald-500" />
-<button type="button" id="auth-avatar-btn" class="flex-1 px-3 py-2.5 rounded-xl border-2 border-dashed border-slate-200 text-xs font-semibold text-slate-600 hover:border-emerald-500 transition"><i class="fa-solid fa-camera mr-2 text-emerald-600"></i>Tomar foto o elegir de galeria</button>
-<input type="file" id="auth-avatar-file" accept="image/jpeg,image/png,image/webp" capture="user" class="hidden" />
+<button type="button" id="auth-avatar-camera" class="flex-1 px-3 py-2.5 rounded-xl border-2 border-dashed border-slate-200 text-xs font-semibold text-slate-600 hover:border-emerald-500 transition"><i class="fa-solid fa-camera mr-2 text-emerald-600"></i>Tomar foto</button>
+<button type="button" id="auth-avatar-gallery" class="flex-1 px-3 py-2.5 rounded-xl border-2 border-dashed border-slate-200 text-xs font-semibold text-slate-600 hover:border-emerald-500 transition"><i class="fa-solid fa-images mr-2 text-emerald-600"></i>Galeria</button>
+<input type="file" id="auth-avatar-file" accept="image/jpeg,image/png,image/webp" class="hidden" />
 <button type="button" id="auth-avatar-clear" class="hidden text-xs text-slate-400 underline">Quitar</button>
 </div>
 <p class="text-[11px] text-slate-400 mt-1">Solo se usa la foto que tu elijas. No accedemos a tu galeria.</p>
