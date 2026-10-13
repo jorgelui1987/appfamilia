@@ -2,7 +2,7 @@
 <html lang="es" class="h-full bg-slate-100">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>MiFamilia - Red Social y Chat Privado</title>
 <meta name="description" content="MiFamilia: muro de fotos, chat familiar, directorio y cumpleanos." />
 <meta name="theme-color" content="#0f172a" />
@@ -35,7 +35,7 @@
 <script src="js/pwa.js" defer></script>
 <script src="js/main.js" defer></script>
 </head>
-<body class="h-full flex flex-col font-sans text-slate-800 antialiased">
+<body class="h-full flex flex-col font-sans text-slate-800 antialiased bg-slate-100">
 <a class="skip-link" href="#contenido">Saltar al contenido</a>
 <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-lg border-b border-slate-800">
 <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
@@ -76,9 +76,9 @@
 </div>
 </div>
 </header>
-<main id="contenido" class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 pb-24 md:pb-6 flex flex-col overflow-hidden">
+<main id="contenido" class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 pb-24 md:pb-6 flex flex-col min-h-0">
 <!-- FEED -->
-<section id="tab-feed-view" class="tab-content flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 overflow-y-auto pr-1 custom-scrollbar" aria-label="Muro de fotos">
+<section id="tab-feed-view" class="tab-content flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:overflow-y-auto lg:pr-1 lg:custom-scrollbar lg:max-h-[calc(100vh-140px)]" aria-label="Muro de fotos">
 <div class="space-y-6">
 <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
 <div class="flex items-center gap-4">

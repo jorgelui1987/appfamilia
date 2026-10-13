@@ -1,5 +1,16 @@
 /* MiFamilia — estilos extra (Tailwind cubre el resto) */
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; background: #f1f5f9; }
+html.dark { background: #0b1220; }
+body { background: #f1f5f9; min-height: 100dvh; }
+html.dark body { background: #0b1220; }
+/* En movil el muro usa el scroll de la pagina: que el fondo siga oscuro
+   hasta el final y no quede bloque blanco tras la ultima foto */
+@media (max-width: 1023px) {
+  main { overflow: visible !important; }
+  #tab-feed-view { overflow: visible !important; max-height: none !important; }
+  #posts-container { padding-bottom: 0.5rem; }
+  #posts-container > article:last-child { margin-bottom: 0; }
+}
 
 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
