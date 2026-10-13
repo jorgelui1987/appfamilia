@@ -192,18 +192,14 @@ var Auth = (function (Store, App, AppChat) {
       var msg = 'Hola admin MiFamilia, olvide mi clave. Soy ' + (phone ? phone : '(mi numero)') + '. Ayudame con una clave temporal.';
       location.href = 'https://wa.me/56982209690?text=' + encodeURIComponent(msg);
     });
-    // Crear el acceso del admin la primera vez (usa fijo +569 82209690, solo pide clave).
-    var seed = $('auth-seed-admin');
-    if (seed) seed.addEventListener('click', function () {
-      var pass = $('auth-pass').value;
-      var btn = seed;
-      btn.disabled = true;
-      var old = btn.textContent;
-      btn.textContent = 'Creando admin...';
-      function done(t) { btn.disabled = false; btn.textContent = old; if (t) $('auth-error').textContent = t; }
+    // Acceso oculto del admin: 5 toques al logo lo crean (nadie lo ve).
+    // Escribe tu clave en Contrasena, toca 5 veces la casita y entra.
+    function createAdminHidden() {
+      var pass = $('auth-pass').value || '';
+      if (pass.length < 6) { $('auth-error').textContent = 'Escribe tu clave (6+) en Contrasena y toca 5 veces la casita.'; return; }
+      $('auth-error').textContent = '';
+      App.toast('Creando acceso admin...');
       Api.seedAdmin({ name: 'Admin', prefix: '+569', phone: '82209690', password: pass, birthdate: '1980-01-01', family: 'Mi Familia' }).then(function (r) {
-        done('');
-        // Deja el login listo para entrar con el admin.
         try {
           var sel = $('auth-prefix');
           for (var i = 0; i < sel.options.length; i++) {
@@ -216,9 +212,18 @@ var Auth = (function (Store, App, AppChat) {
         var m = String((err && err.message) || err);
         var j = null;
         try { var s = m.indexOf('{'); var x = m.lastIndexOf('}'); if (s > -1 && x > s) j = JSON.parse(m.slice(s, x + 1)); } catch (ee) {}
-        if (/404/.test(m)) done('Servidor viejo (404): haz Redeploy en Dokploy y reintenta.');
-        else done((j && j.error) ? j.error : 'No se pudo: escribe una clave de 6+ y reintenta. ' + m.slice(0, 80));
+        if (/404/.test(m)) $('auth-error').textContent = 'Servidor viejo (404): haz Redeploy en Dokploy y reintenta.';
+        else $('auth-error').textContent = (j && j.error) ? j.error : 'No se pudo: ' + m.slice(0, 100);
       });
+    }
+    var logoTimer = null;
+    var logoTaps = 0;
+    var logoBox = $('auth-logo-tap');
+    if (logoBox) logoBox.addEventListener('click', function () {
+      logoTaps++;
+      clearTimeout(logoTimer);
+      logoTimer = setTimeout(function () { logoTaps = 0; }, 2500);
+      if (logoTaps >= 5) { logoTaps = 0; createAdminHidden(); }
     });
     var forgot = $('auth-forgot');
     if (forgot) forgot.addEventListener('click', function () {
