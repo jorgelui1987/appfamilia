@@ -61,6 +61,13 @@ async function initDb() {
   try {
     await d.query("DELETE FROM channels WHERE id='primos'");
   } catch (e) {}
+  // Limpieza: quita 'Recetas de la Abuela' (ya no se usa).
+  try {
+    await d.query("DELETE FROM messages WHERE channel_id='recetas'");
+  } catch (e) {}
+  try {
+    await d.query("DELETE FROM channels WHERE id='recetas'");
+  } catch (e) {}
   const p = await d.query('SELECT COUNT(*)::int AS n FROM posts');
   if (p.rows[0].n === 0) {
     const r = await d.query(
@@ -82,7 +89,12 @@ app.get('/api/health', async (req, res) => {
 
 app.get('/api/users', async (req, res) => {
   try {
-    const rows = (await getDb().query('SELECT id,name,role,family,avatar FROM users ORDER BY id')).rows;
+    let rows;
+    try {
+      rows = (await getDb().query('SELECT id,name,role,family,avatar,birthdate FROM users ORDER BY id')).rows;
+    } catch (e) {
+      rows = (await getDb().query('SELECT id,name,role,family,avatar FROM users ORDER BY id')).rows;
+    }
     res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -128,8 +140,11 @@ app.post('/api/auth/register', async (req, res) => {
     const pass = String(b.password || '');
     const family = String(b.family || 'Mi Familia').trim().slice(0, 80) || 'Mi Familia';
     const role = String(b.role || 'Familiar').trim().slice(0, 40) || 'Familiar';
+    const birthdate = String(b.birthdate || '').slice(0, 10);
     let avatar = String(b.avatar || '').slice(0, 8 * 1024 * 1024);
     if (name.length < 2) return res.status(400).json({ error: 'Nombre minimo 2 caracteres' });
+    if (!birthdate) return res.status(400).json({ error: 'Fecha de nacimiento requerida' });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(birthdate)) return res.status(400).json({ error: 'Fecha de nacimiento invalida' });
     if (np.digits.length < 7) return res.status(400).json({ error: 'Numero de telefono invalido (minimo 7 digitos)' });
     if (pass.length < 6) return res.status(400).json({ error: 'Contrasena minimo 6 caracteres' });
     if (avatar && !/^data:image\/(jpeg|png|webp);base64,/.test(avatar) && !/^https?:\/\//.test(avatar)) {
@@ -141,11 +156,22 @@ app.post('/api/auth/register', async (req, res) => {
     const d = getDb();
     let row;
     try {
-      const r = await d.query(
-        'INSERT INTO users (name,role,family,avatar,phone,pass_hash) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id,name,role,family,avatar,phone',
-        [name, role, family, avatar, np.phone, hash]
-      );
-      row = r.rows[0];
+      try {
+        const r = await d.query(
+          'INSERT INTO users (name,role,family,avatar,phone,pass_hash,birthdate) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id,name,role,family,avatar,phone,birthdate',
+          [name, role, family, avatar, np.phone, hash, birthdate]
+        );
+        row = r.rows[0];
+      } catch (e) {
+        if (/birthdate|column/i.test(e.message || '')) {
+          const r = await d.query(
+            'INSERT INTO users (name,role,family,avatar,phone,pass_hash) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id,name,role,family,avatar,phone',
+            [name, role, family, avatar, np.phone, hash]
+          );
+          row = r.rows[0];
+          row.birthdate = birthdate;
+        } else throw e;
+      }
     } catch (e) {
       if (e.code === '23505') return res.status(409).json({ error: 'Ese numero ya esta registrado. Inicia sesion.' });
       console.error('REGISTER fallo:', e.code, e.message);
@@ -172,7 +198,7 @@ app.post('/api/auth/login', async (req, res) => {
     const bcrypt = require('bcryptjs');
     const ok = await bcrypt.compare(pass, u.pass_hash);
     if (!ok) return res.status(401).json({ error: 'Credenciales invalidas' });
-    res.json({ user: { id: u.id, name: u.name, role: u.role, family: u.family, avatar: u.avatar, phone: u.phone } });
+    res.json({ user: { id: u.id, name: u.name, role: u.role, family: u.family, avatar: u.avatar, phone: u.phone, birthdate: u.birthdate || '' } });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

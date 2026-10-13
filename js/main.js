@@ -81,7 +81,38 @@ var AppMain = (function (Store, App, AppChat, AppForms) {
     var gotoChat = document.querySelector('[data-goto-chat]');
     if (gotoChat) gotoChat.addEventListener('click', function () { App.switchTab('chat'); });
     var invite = document.getElementById('invite-btn');
-    if (invite) invite.addEventListener('click', function () { App.toast('Enlace de invitacion copiado para WhatsApp'); });
+    if (invite) invite.addEventListener('click', function () {
+      var link = location.origin + location.pathname + '#registro';
+      var txt = document.getElementById('invite-link-text');
+      if (txt) txt.textContent = link;
+      var err = document.getElementById('invite-error');
+      if (err) err.textContent = '';
+      AppChat.openModal('invite-modal');
+    });
+    var invClose = document.getElementById('invite-close');
+    if (invClose) invClose.addEventListener('click', function () { AppChat.closeModal('invite-modal'); });
+    var invCopy = document.getElementById('invite-copy');
+    if (invCopy) invCopy.addEventListener('click', function () {
+      var link = (document.getElementById('invite-link-text') || {}).textContent || location.href;
+      function done() { App.toast('Enlace copiado. Pasalo por WhatsApp'); }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, function () { fallbackCopy(link); done(); });
+        else { fallbackCopy(link); done(); }
+      } catch (e) { fallbackCopy(link); done(); }
+      function fallbackCopy(t) {
+        try {
+          var ta = document.createElement('textarea');
+          ta.value = t; document.body.appendChild(ta); ta.select();
+          document.execCommand('copy'); ta.remove();
+        } catch (ee) {}
+      }
+    });
+    var invWa = document.getElementById('invite-wa');
+    if (invWa) invWa.addEventListener('click', function () {
+      var link = (document.getElementById('invite-link-text') || {}).textContent || location.href;
+      var msg = 'Unete a MiFamilia (privado): ' + link;
+      location.href = 'https://wa.me/?text=' + encodeURIComponent(msg);
+    });
     var evBtn = document.getElementById('event-btn');
     if (evBtn) evBtn.addEventListener('click', function () { App.toast('Proximamente: crear evento'); });
     var confirm = document.getElementById('confirm-btn');
@@ -130,6 +161,7 @@ var AppMain = (function (Store, App, AppChat, AppForms) {
     AppChat.renderChannels();
     AppChat.renderMessages();
     AppForms.renderFamilies();
+    AppForms.renderBirthdays();
     Auth.syncBtn();
     // Acceso obligatorio: primero telefono + contrasena, despues la app.
     Auth.requireAuth();
@@ -143,13 +175,20 @@ var AppMain = (function (Store, App, AppChat, AppForms) {
       AppChat.renderChannels();
       AppChat.renderMessages();
       AppForms.renderFamilies();
+      AppForms.renderBirthdays();
       Auth.syncBtn();
     });
     document.addEventListener('mf-user-changed', function () {
       AppForms.updateUserUI();
       App.renderPosts();
       AppForms.renderFamilies();
+      AppForms.renderBirthdays();
       Auth.syncBtn();
+    });
+    // Boton Felicitar en cumpleanos -> abre el privado con esa persona.
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('[data-bday-dm]');
+      if (b && typeof AppChat !== 'undefined' && AppChat.openDM) AppChat.openDM(b.getAttribute('data-bday-dm'));
     });
   }
   return { init: init };

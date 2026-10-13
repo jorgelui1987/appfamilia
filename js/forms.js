@@ -30,6 +30,58 @@ var AppForms = (function (Store, App, AppChat) {
     $('sidebar-user-family').textContent = u.family;
   }
 
+  function fmtBirth(birthdate) {
+    if (!birthdate) return '';
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(birthdate));
+    if (!m) return String(birthdate);
+    var meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    return Number(m[3]) + ' ' + (meses[Number(m[2]) - 1] || '') + ' ' + m[1];
+  }
+
+  function birthdayInfo(birthdate) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(birthdate || ''));
+    if (!m) return null;
+    var now = new Date();
+    var y = now.getFullYear();
+    var md = Number(m[2]) * 100 + Number(m[3]);
+    var today = (now.getMonth() + 1) * 100 + now.getDate();
+    var age = y - Number(m[1]);
+    var next = new Date(y, Number(m[2]) - 1, Number(m[3]));
+    var diff = Math.ceil((next - new Date(y, now.getMonth(), now.getDate())) / 86400000);
+    if (diff < 0) { age += 1; diff = Math.ceil((new Date(y + 1, Number(m[2]) - 1, Number(m[3])) - new Date(y, now.getMonth(), now.getDate())) / 86400000); }
+    return { age: diff === 0 ? age : age, days: diff, today: diff === 0 };
+  }
+
+  function renderBirthdays() {
+    var list = $('events-list');
+    if (!list) return;
+    // Limpia cumpleanos auto (conserva tarjetas fijas si las hubiera).
+    Array.prototype.slice.call(list.querySelectorAll('[data-auto-bday]')).forEach(function (el) { el.remove(); });
+    var items = [];
+    Store.users.forEach(function (u) {
+      if (!u.birthdate) return;
+      var info = birthdayInfo(u.birthdate);
+      if (!info) return;
+      if (info.days >= 0 && info.days <= 60) items.push({ u: u, info: info });
+    });
+    items.sort(function (a, b) { return a.info.days - b.info.days; });
+    items.forEach(function (it) {
+      var label = it.info.today ? 'Hoy' : (it.info.days === 1 ? 'Manana' : 'En ' + it.info.days + ' dias');
+      var el = document.createElement('div');
+      el.setAttribute('data-auto-bday', '1');
+      el.className = 'bg-gradient-to-r from-pink-500 to-rose-500 text-white p-5 rounded-2xl flex items-center justify-between gap-3';
+      el.innerHTML = '<div><span class="text-xs font-semibold uppercase bg-white/20 px-2 py-0.5 rounded-full">' + label + '</span><h3 class="font-bold text-lg mt-1">Cumpleanos de ' + escapeHtml(it.u.name) + '</h3><p class="text-xs text-pink-100">Cumple ' + it.info.age + ' anos · ' + fmtBirth(it.u.birthdate) + '</p></div><button type="button" data-bday-dm="' + it.u.id + '" class="bg-white text-pink-600 px-3.5 py-2 rounded-xl font-bold text-xs">Felicitar</button>';
+      list.appendChild(el);
+    });
+    if (!items.length) {
+      var empty = document.createElement('div');
+      empty.setAttribute('data-auto-bday', '1');
+      empty.className = 'text-xs text-slate-400 bg-white border border-dashed border-slate-200 rounded-2xl p-5 text-center md:col-span-2';
+      empty.textContent = 'Registra la fecha de nacimiento al crear la cuenta y aqui veras los cumpleanos.';
+      list.appendChild(empty);
+    }
+  }
+
   function renderFamilies() {
     var grid = $('families-grid');
     if (!grid) return;
@@ -44,7 +96,8 @@ var AppForms = (function (Store, App, AppChat) {
       card.className = 'bg-white rounded-2xl p-5 border border-slate-200 shadow-sm';
       var rows = groups[fam].map(function (u) {
         var isMe = u.id === Store.state.currentUserId;
-        return '<div class="flex items-center gap-3 py-1.5"><img src="' + escapeHtml(u.avatar) + '" alt="" loading="lazy" class="w-10 h-10 rounded-full object-cover" /><div class="flex-1"><p class="font-semibold text-sm">' + escapeHtml(u.name) + (isMe ? ' <span class="text-[10px] text-emerald-600 font-bold">(tu)</span>' : '') + '</p><p class="text-xs text-slate-400">' + escapeHtml(u.role) + '</p></div>' + (isMe ? '' : '<button type="button" data-dm="' + u.id + '" class="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 transition" title="Chat privado con ' + escapeHtml(u.name) + '"><i class="fa-brands fa-whatsapp mr-1"></i>Mensaje</button>') + '</div>';
+        var btxt = u.birthdate ? ' · 🎂 ' + fmtBirth(u.birthdate) : '';
+        return '<div class="flex items-center gap-3 py-1.5"><img src="' + escapeHtml(u.avatar) + '" alt="" loading="lazy" class="w-10 h-10 rounded-full object-cover" /><div class="flex-1"><p class="font-semibold text-sm">' + escapeHtml(u.name) + (isMe ? ' <span class="text-[10px] text-emerald-600 font-bold">(tu)</span>' : '') + '</p><p class="text-xs text-slate-400">' + escapeHtml(u.role) + btxt + '</p></div>' + (isMe ? '' : '<button type="button" data-dm="' + u.id + '" class="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 transition" title="Chat privado con ' + escapeHtml(u.name) + '"><i class="fa-brands fa-whatsapp mr-1"></i>Mensaje</button>') + '</div>';
       }).join('');
       card.innerHTML = '<div class="mb-3 pb-3 border-b border-slate-100"><h3 class="font-bold text-base">' + escapeHtml(fam) + '</h3><span class="text-xs text-slate-500">' + groups[fam].length + ' Integrantes</span></div>' + rows;
       grid.appendChild(card);
@@ -233,5 +286,5 @@ var AppForms = (function (Store, App, AppChat) {
     });
   }
 
-  return { renderUserSelector: renderUserSelector, updateUserUI: updateUserUI, renderFamilies: renderFamilies, bindForms: bindForms };
+  return { renderUserSelector: renderUserSelector, updateUserUI: updateUserUI, renderFamilies: renderFamilies, renderBirthdays: renderBirthdays, bindForms: bindForms };
 })(Store, App, AppChat);

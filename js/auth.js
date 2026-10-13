@@ -41,6 +41,8 @@ var Auth = (function (Store, App, AppChat) {
     var isReg = m === 'register';
     $('auth-avatar-wrap').classList.toggle('hidden', !isReg);
     $('auth-name-wrap').classList.toggle('hidden', !isReg);
+    var bw = $('auth-birth-wrap');
+    if (bw) bw.classList.toggle('hidden', !isReg);
     $('auth-family-wrap').classList.toggle('hidden', !isReg);
     $('auth-submit').textContent = isReg ? 'Crear mi cuenta' : 'Entrar';
     $('auth-tab-login').className = 'flex-1 py-2 rounded-xl ' + (!isReg ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600');
@@ -53,7 +55,7 @@ var Auth = (function (Store, App, AppChat) {
   function applyUser(u, msg) {
     var exists = Store.getUser(u.id);
     if (!exists) Store.users.push(u);
-    else { exists.name = u.name; exists.role = u.role; exists.family = u.family; exists.avatar = u.avatar; }
+    else { exists.name = u.name; exists.role = u.role; exists.family = u.family; exists.avatar = u.avatar; if (u.birthdate) exists.birthdate = u.birthdate; if (u.phone) exists.phone = u.phone; }
     Store.state.currentUserId = u.id;
     try { localStorage.setItem('mf-session', JSON.stringify({ id: u.id })); } catch (e) {}
     AppChat.closeModal('auth-modal');
@@ -229,17 +231,17 @@ var Auth = (function (Store, App, AppChat) {
         for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) | 0; }
         return 100000 + Math.abs(h % 899999999);
       }
-      function localRegister(name, family, prefix, phone, pass, avatar) {
+      function localRegister(name, family, prefix, phone, pass, avatar, birthdate) {
         var users = [];
         try { users = JSON.parse(localStorage.getItem('mf-local-users') || '[]'); } catch (e) { users = []; }
         var full = prefix + ' ' + String(phone).replace(/\D/g, '');
         var dup = users.filter(function (x) { return x.phone === full; })[0];
         if (dup) { $('auth-error').textContent = 'Ese numero ya esta registrado en este dispositivo. Inicia sesion.'; done(); return; }
-        var u = { id: localIdFor(full), name: name, role: 'Familiar', family: family || 'Mi Familia', avatar: avatar || '', phone: full, pass: btoa(unescape(encodeURIComponent(pass))) };
+        var u = { id: localIdFor(full), name: name, role: 'Familiar', family: family || 'Mi Familia', avatar: avatar || '', phone: full, birthdate: birthdate || '', pass: btoa(unescape(encodeURIComponent(pass))) };
         users.push(u);
         try { localStorage.setItem('mf-local-users', JSON.stringify(users)); } catch (e) {}
         avatarData = '';
-        applyUser({ id: u.id, name: u.name, role: u.role, family: u.family, avatar: u.avatar, phone: u.phone }, 'Cuenta creada en este dispositivo. Bienvenido, ' + name.split(' ')[0]);
+        applyUser({ id: u.id, name: u.name, role: u.role, family: u.family, avatar: u.avatar, phone: u.phone, birthdate: u.birthdate }, 'Cuenta creada en este dispositivo. Bienvenido, ' + name.split(' ')[0]);
         document.dispatchEvent(new CustomEvent('mf-user-changed'));
         done();
       }
@@ -257,7 +259,11 @@ var Auth = (function (Store, App, AppChat) {
       if (mode === 'register') {
         var name = $('auth-name').value.trim();
         var family = $('auth-family').value.trim() || 'Mi Familia';
-        Api.register({ name: name, prefix: prefix, phone: phone, password: pass, family: family, role: 'Familiar', avatar: avatarData }).then(function (r) {
+        var birthEl = $('auth-birth');
+        var birthdate = birthEl ? birthEl.value : '';
+        if (name.length < 2) { $('auth-error').textContent = 'Escribe tu nombre y apellido.'; done(); return; }
+        if (!birthdate) { $('auth-error').textContent = 'Tu fecha de nacimiento es obligatoria para los cumpleanos.'; done(); return; }
+        Api.register({ name: name, prefix: prefix, phone: phone, password: pass, family: family, role: 'Familiar', avatar: avatarData, birthdate: birthdate }).then(function (r) {
           done();
           avatarData = '';
           var pv = $('auth-avatar-preview');
@@ -268,7 +274,7 @@ var Auth = (function (Store, App, AppChat) {
           document.dispatchEvent(new CustomEvent('mf-user-changed'));
         }).catch(function (err) {
           if (/ECONNREFUSED|500|Failed to fetch|NetworkError|Load failed/i.test(String(err.message))) {
-            localRegister(name, family, prefix, phone, pass, avatarData);
+            localRegister(name, family, prefix, phone, pass, avatarData, birthdate);
             return;
           }
           done();

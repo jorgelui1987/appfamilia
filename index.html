@@ -152,14 +152,10 @@
 <div><h2 class="font-bold text-xl">Proximos Cumpleanos y Reuniones</h2><p class="text-slate-500 text-sm">No olvides felicitarlos</p></div>
 <button type="button" id="event-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl"><i class="fa-solid fa-plus mr-1"></i>Nuevo Evento</button>
 </div>
-<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div id="events-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
 <div class="bg-gradient-to-r from-pink-500 to-rose-500 text-white p-5 rounded-2xl flex items-center justify-between gap-3">
 <div><span class="text-xs font-semibold uppercase bg-white/20 px-2 py-0.5 rounded-full">Manana</span><h3 class="font-bold text-lg mt-1">Cumpleanos de Tia Maria</h3><p class="text-xs text-pink-100">Cumple 52 anos</p></div>
 <button type="button" data-goto-chat class="bg-white text-pink-600 px-3.5 py-2 rounded-xl font-bold text-xs">Enviar mensaje</button>
-</div>
-<div class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-5 rounded-2xl flex items-center justify-between gap-3">
-<div><span class="text-xs font-semibold uppercase bg-white/20 px-2 py-0.5 rounded-full">En 5 dias</span><h3 class="font-bold text-lg mt-1">Almuerzo Dominguero</h3><p class="text-xs text-emerald-100">Casa de los Abuelos - 2:00 PM</p></div>
-<button type="button" id="confirm-btn" class="bg-white text-emerald-700 px-3.5 py-2 rounded-xl font-bold text-xs">Confirmar</button>
 </div>
 </div>
 </section>
@@ -205,6 +201,20 @@
 </form>
 </div>
 </div>
+<!-- MODAL INVITAR -->
+<div id="invite-modal" class="modal fixed inset-0 bg-slate-900/60 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="invite-title">
+<div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl">
+<h3 id="invite-title" class="font-bold text-base mb-1"><i class="fa-solid fa-user-plus text-emerald-600 mr-2"></i>Invitar familiar</h3>
+<p class="text-xs text-slate-500 mb-4">Comparte este enlace por WhatsApp. Al abrirlo se registra con su numero y fecha de nacimiento.</p>
+<div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs break-all" id="invite-link-text"></div>
+<p id="invite-error" class="text-xs text-rose-600 mt-1" aria-live="polite"></p>
+<div class="mt-4 flex justify-end gap-2">
+<button type="button" id="invite-close" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">Cerrar</button>
+<button type="button" id="invite-copy" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold">Copiar enlace</button>
+<button type="button" id="invite-wa" class="px-4 py-2 bg-[#25D366] hover:brightness-95 text-white rounded-xl text-xs font-bold"><i class="fa-brands fa-whatsapp mr-1"></i>WhatsApp</button>
+</div>
+</div>
+</div>
 <!-- MODAL USUARIO -->
 <div id="user-modal" class="modal fixed inset-0 bg-slate-900/60 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="user-title">
 <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl">
@@ -240,6 +250,11 @@
 <div id="auth-name-wrap" class="hidden">
 <label class="block text-xs font-semibold mb-1" for="auth-name">Nombre y apellido</label>
 <input id="auth-name" type="text" placeholder="Ej: Ana Castro" maxlength="80" autocomplete="name" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs" />
+</div>
+<div id="auth-birth-wrap" class="hidden">
+<label class="block text-xs font-semibold mb-1" for="auth-birth">Fecha de nacimiento *</label>
+<input id="auth-birth" type="date" required maxlength="10" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs" />
+<p class="text-[11px] text-slate-400 mt-1">Para mostrar tu cumpleanos a la familia.</p>
 </div>
 <div id="auth-family-wrap" class="hidden">
 <label class="block text-xs font-semibold mb-1" for="auth-family">Familia</label>

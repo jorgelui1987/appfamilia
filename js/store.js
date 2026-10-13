@@ -42,7 +42,6 @@ var Store = (function () {
 
   var channels = [
     { id: 'gen', name: 'Chat General Familiar', subtitle: 'Todos los integrantes', type: 'group', icon: 'fa-users', color: 'bg-emerald-600' },
-    { id: 'recetas', name: 'Recetas de la Abuela', subtitle: 'Secretos de cocina', type: 'group', icon: 'fa-utensils', color: 'bg-amber-600' },
     { id: 'maria', name: 'Tia Maria', subtitle: 'En linea', type: 'direct', avatar: users[1].avatar }
   ];
 
@@ -51,9 +50,6 @@ var Store = (function () {
       { sender: 'Maria Perez', text: 'Hola a todos. A que hora nos encontramos el domingo en casa de la abuela?', time: '10:15 AM' },
       { sender: 'Carlos Castro', text: 'Llegamos a las 1:30 PM para ayudar con el almuerzo.', time: '10:18 AM' },
       { sender: 'Lucas Perez', text: 'Yo llevo el postre y la musica.', time: '10:22 AM' }
-    ],
-    recetas: [
-      { sender: 'Maria Perez', text: 'Alguien tiene la receta exacta de las empanadas de la abuela?', time: 'Lunes' }
     ],
     maria: [
       { sender: 'Maria Perez', text: 'Hola Carlos, como estan los chicos?', time: '09:00 AM' }

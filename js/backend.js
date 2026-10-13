@@ -97,8 +97,8 @@ var Backend = (function (Store) {
         posts.map(normalizePost).forEach((p) => Store.posts.push(p));
       }
       if (channels && channels.length) {
-        // Grupo viejo eliminado: nunca mostrar 'primos' aunque siga en la nube.
-        const clean = channels.filter((c) => String(c.id) !== 'primos');
+        // Grupos viejos eliminados: nunca mostrar 'primos' ni 'recetas'.
+        const clean = channels.filter((c) => String(c.id) !== 'primos' && String(c.id) !== 'recetas');
         const keepDM = Store.channels.filter((c) => c.dm && /^dm-(\d+)-(\d+)$/.test(String(c.id)));
         Store.channels.length = 0;
         clean.forEach((c) => {
@@ -109,7 +109,7 @@ var Backend = (function (Store) {
         // Limpia tambien mensajes locales huerfanos de esos ids.
         try {
           Object.keys(Store.messages || {}).forEach((k) => {
-            if (k === 'primos' || (k === 'maria' && !clean.some((c) => String(c.id) === 'maria'))) delete Store.messages[k];
+            if (k === 'primos' || k === 'recetas' || (k === 'maria' && !clean.some((c) => String(c.id) === 'maria'))) delete Store.messages[k];
           });
         } catch (e) {}
         // Repone los DM locales que el servidor aun no conoce.
