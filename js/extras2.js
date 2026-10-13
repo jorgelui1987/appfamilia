@@ -54,9 +54,7 @@ var ExtrasB = (function (Store, App, Extras) {
   }
 
   function seedPolls() {
-    if (!Store.polls) Store.polls = [
-      { id: 'p1', q: 'Donde hacemos el almuerzo del domingo?', opts: [{ t: 'Casa de los abuelos', v: [1, 2] }, { t: 'Casa de Carlos', v: [3] }, { t: 'Restaurante', v: [] }] }
-    ];
+    if (!Store.polls) Store.polls = [];
   }
 
   function renderPolls() {
@@ -64,6 +62,13 @@ var ExtrasB = (function (Store, App, Extras) {
     if (!box) return;
     box.innerHTML = '';
     var me = Store.state.currentUserId;
+    // Si no hay encuestas, muestra mensaje en vez de la del almuerzo vieja.
+    if (!Store.polls || !Store.polls.length) {
+      box.innerHTML = '<div class="bg-white p-5 rounded-2xl shadow-sm border border-dashed border-slate-200 text-center"><p class="font-bold text-sm mb-1">Sin encuestas por ahora</p><p class="text-[11px] text-slate-400">Crea la primera: ej. "Donde pasamos Navidad?"</p><button type="button" id="poll-new-btn" class="mt-3 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold">Crear encuesta</button></div>';
+      var nb = $('poll-new-btn');
+      if (nb) nb.addEventListener('click', function () { createPoll(); });
+      return;
+    }
     Store.polls.forEach(function (poll) {
       var total = poll.opts.reduce(function (a, o) { return a + o.v.length; }, 0);
       var card = document.createElement('div');
@@ -94,5 +99,23 @@ var ExtrasB = (function (Store, App, Extras) {
     renderPolls();
   }
 
-  return { toggleReact: toggleReact, restoreReacts: restoreReacts, renderReacts: renderReacts, seedPolls: seedPolls, renderPolls: renderPolls, vote: vote };
+  function createPoll() {
+    var q = '';
+    try { q = prompt('Pregunta de la encuesta (ej. Donde pasamos Navidad?)') || ''; } catch (e) {}
+    q = String(q).trim().slice(0, 120);
+    if (!q) return;
+    var o1 = '', o2 = '';
+    try {
+      o1 = prompt('Opcion 1 (ej. Casa de los abuelos)') || '';
+      o2 = prompt('Opcion 2 (ej. Casa de Carlos)') || '';
+    } catch (e) {}
+    o1 = String(o1).trim().slice(0, 60) || 'Opcion 1';
+    o2 = String(o2).trim().slice(0, 60) || 'Opcion 2';
+    Store.polls = Store.polls || [];
+    Store.polls.push({ id: 'p' + Date.now(), q: q, opts: [{ t: o1, v: [] }, { t: o2, v: [] }] });
+    renderPolls();
+    App.toast('Encuesta creada');
+  }
+
+  return { toggleReact: toggleReact, restoreReacts: restoreReacts, renderReacts: renderReacts, seedPolls: seedPolls, renderPolls: renderPolls, vote: vote, createPoll: createPoll };
 })(Store, App, Extras);
