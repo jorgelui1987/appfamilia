@@ -113,6 +113,27 @@ var AppMain = (function (Store, App, AppChat, AppForms) {
       var msg = 'Unete a MiFamilia (privado): ' + link;
       location.href = 'https://wa.me/?text=' + encodeURIComponent(msg);
     });
+    // Respaldo semanal solo-admin: descarga JSON con todo.
+    var bkp = document.getElementById('backup-btn');
+    if (bkp) bkp.addEventListener('click', function () {
+      var me = Store.currentUser();
+      if (!me) { App.toast('Entra primero'); return; }
+      var admin = false;
+      try { admin = (typeof Auth !== 'undefined' && Auth.isAdmin) ? Auth.isAdmin() : (Number(me.is_admin) === 1); } catch (e) {}
+      if (!admin) { App.toast('Solo el admin puede descargar el respaldo'); return; }
+      App.toast('Descargando respaldo...');
+      Api.backup(me.id).then(function (data) {
+        var blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'mifamilia-respaldo-' + new Date().toISOString().slice(0, 10) + '.json';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { try { URL.revokeObjectURL(a.href); } catch (e) {} }, 5000);
+        App.toast('Respaldo descargado. Guardalo en Drive');
+      }).catch(function (err) {
+        App.toast('No se pudo descargar: ' + String((err && err.message) || err).slice(0, 100));
+      });
+    });
     var evBtn = document.getElementById('event-btn');
     if (evBtn) evBtn.addEventListener('click', function () { App.toast('Proximamente: crear evento'); });
     var confirm = document.getElementById('confirm-btn');
@@ -177,6 +198,7 @@ var AppMain = (function (Store, App, AppChat, AppForms) {
       AppForms.renderFamilies();
       AppForms.renderBirthdays();
       Auth.syncBtn();
+      try { if (typeof Auth !== 'undefined' && Auth.syncAdminUI) Auth.syncAdminUI(); } catch (e) {}
     });
     document.addEventListener('mf-user-changed', function () {
       AppForms.updateUserUI();
@@ -184,6 +206,7 @@ var AppMain = (function (Store, App, AppChat, AppForms) {
       AppForms.renderFamilies();
       AppForms.renderBirthdays();
       Auth.syncBtn();
+      try { if (typeof Auth !== 'undefined' && Auth.syncAdminUI) Auth.syncAdminUI(); } catch (e) {}
     });
     // Boton Felicitar en cumpleanos -> abre el privado con esa persona.
     document.addEventListener('click', function (e) {

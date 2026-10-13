@@ -57,7 +57,10 @@ var Backend = (function (Store) {
   async function load() {
     try {
       await Api.health();
-      const users = await Api.users();
+      const meId = Store.state.currentUserId || 0;
+      let users = [];
+      try { users = await Api.usersAs(meId); }
+      catch (e) { users = await Api.users(); }
       const posts = await Api.posts();
       const channels = await Api.channels();
       if (users && users.length) {
@@ -65,7 +68,7 @@ var Backend = (function (Store) {
         users.forEach((u) => {
           const ex = Store.getUser(u.id);
           if (!ex) Store.users.push(u);
-          else { ex.name = u.name; ex.role = u.role; ex.family = u.family; ex.avatar = u.avatar; }
+          else { ex.name = u.name; ex.role = u.role; ex.family = u.family; ex.avatar = u.avatar; if (u.birthdate) ex.birthdate = u.birthdate; if (typeof u.is_admin !== 'undefined') ex.is_admin = u.is_admin; if (u.phone) ex.phone = u.phone; }
         });
         // Dedupe usuarios por nombre (ej. 'Carlos' local + 'Carlos Castro' nube):
         // fusiona al de id menor y deja 1 por persona para no duplicar privados.

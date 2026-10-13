@@ -87,15 +87,34 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+var ADMIN_PHONE = '+569 82209690';
+
 app.get('/api/users', async (req, res) => {
   try {
     let rows;
     try {
-      rows = (await getDb().query('SELECT id,name,role,family,avatar,birthdate FROM users ORDER BY id')).rows;
+      rows = (await getDb().query('SELECT id,name,role,family,avatar,birthdate,is_admin,phone FROM users ORDER BY id')).rows;
     } catch (e) {
-      rows = (await getDb().query('SELECT id,name,role,family,avatar FROM users ORDER BY id')).rows;
+      try {
+        rows = (await getDb().query('SELECT id,name,role,family,avatar,birthdate FROM users ORDER BY id')).rows;
+      } catch (e2) {
+        rows = (await getDb().query('SELECT id,name,role,family,avatar FROM users ORDER BY id')).rows;
+      }
     }
-    res.json(rows);
+    // Nunca expone pass_hash; el telefono solo lo ve el admin.
+    const meId = Number(req.query.meId) || 0;
+    let iAmAdmin = false;
+    try {
+      if (meId) {
+        const me = (await getDb().query('SELECT is_admin,phone FROM users WHERE id=$1', [meId])).rows[0];
+        iAmAdmin = !!me && (Number(me.is_admin) === 1 || String(me.phone || '').replace(/\s/g, '') === '+56982209690');
+      }
+    } catch (e) {}
+    res.json(rows.map((u) => ({
+      id: u.id, name: u.name, role: u.role, family: u.family, avatar: u.avatar,
+      birthdate: u.birthdate || '', is_admin: Number(u.is_admin) === 1,
+      phone: iAmAdmin ? (u.phone || '') : ''
+    })));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -155,21 +174,30 @@ app.post('/api/auth/register', async (req, res) => {
     const hash = await bcrypt.hash(pass, 10);
     const d = getDb();
     let row;
+    // El numero del admin siempre queda como admin.
+    const isAdmin = np.phone.replace(/\s/g, '') === '+56982209690' ? 1 : 0;
     try {
       try {
         const r = await d.query(
-          'INSERT INTO users (name,role,family,avatar,phone,pass_hash,birthdate) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id,name,role,family,avatar,phone,birthdate',
-          [name, role, family, avatar, np.phone, hash, birthdate]
+          'INSERT INTO users (name,role,family,avatar,phone,pass_hash,birthdate,is_admin) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id,name,role,family,avatar,phone,birthdate,is_admin',
+          [name, role, family, avatar, np.phone, hash, birthdate, isAdmin]
         );
         row = r.rows[0];
       } catch (e) {
-        if (/birthdate|column/i.test(e.message || '')) {
-          const r = await d.query(
-            'INSERT INTO users (name,role,family,avatar,phone,pass_hash) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id,name,role,family,avatar,phone',
-            [name, role, family, avatar, np.phone, hash]
-          );
-          row = r.rows[0];
-          row.birthdate = birthdate;
+        if (/birthdate|is_admin|column/i.test(e.message || '')) {
+          try {
+            const r = await d.query(
+              'INSERT INTO users (name,role,family,avatar,phone,pass_hash) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id,name,role,family,avatar,phone',
+              [name, role, family, avatar, np.phone, hash]
+            );
+            row = r.rows[0];
+            row.birthdate = birthdate;
+            row.is_admin = isAdmin;
+            try { await d.query('UPDATE users SET birthdate=$1,is_admin=$2 WHERE id=$3', [birthdate, isAdmin, row.id]); } catch (ee) {}
+          } catch (e2) {
+            if (e2.code === '23505') return res.status(409).json({ error: 'Ese numero ya esta registrado. Inicia sesion.' });
+            throw e2;
+          }
         } else throw e;
       }
     } catch (e) {
@@ -198,12 +226,20 @@ app.post('/api/auth/login', async (req, res) => {
     const bcrypt = require('bcryptjs');
     const ok = await bcrypt.compare(pass, u.pass_hash);
     if (!ok) return res.status(401).json({ error: 'Credenciales invalidas' });
-    res.json({ user: { id: u.id, name: u.name, role: u.role, family: u.family, avatar: u.avatar, phone: u.phone, birthdate: u.birthdate || '' } });
+    // Si es el numero del admin pero aun no tiene la marca, la corrige.
+    try {
+      if (String(u.phone || '').replace(/\s/g, '') === '+56982209690' && Number(u.is_admin) !== 1) {
+        await d.query('UPDATE users SET is_admin=1 WHERE id=$1', [u.id]);
+        u.is_admin = 1;
+      }
+    } catch (e) {}
+    res.json({ user: { id: u.id, name: u.name, role: u.role, family: u.family, avatar: u.avatar, phone: u.phone, birthdate: u.birthdate || '', is_admin: Number(u.is_admin) === 1 } });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/auth/reset', async (req, res) => {
-  // Recuperacion asistida: un familiar dentro genera una clave temporal.
+  // Solo el ADMIN puede resetear claves. El familiar olvidado le escribe
+  // por WhatsApp al admin y el admin le crea la clave temporal desde la app.
   // Body: { prefix, phone, newPassword, helperId }
   try {
     const b = req.body || {};
@@ -213,8 +249,10 @@ app.post('/api/auth/reset', async (req, res) => {
     if (np.digits.length < 7) return res.status(400).json({ error: 'Numero invalido' });
     if (newPass.length < 6) return res.status(400).json({ error: 'Nueva contrasena minimo 6 caracteres' });
     const d = getDb();
-    const helper = (await d.query('SELECT id,name FROM users WHERE id=$1', [helperId])).rows[0];
-    if (!helper) return res.status(403).json({ error: 'Solo un familiar con sesion puede ayudar a recuperar.' });
+    const helper = (await d.query('SELECT id,name,is_admin,phone FROM users WHERE id=$1', [helperId])).rows[0];
+    if (!helper) return res.status(403).json({ error: 'Solo el admin con sesion puede resetear claves.' });
+    const helperIsAdmin = Number(helper.is_admin) === 1 || String(helper.phone || '').replace(/\s/g, '') === '+56982209690';
+    if (!helperIsAdmin) return res.status(403).json({ error: 'Solo el admin puede resetear claves. Escribele por WhatsApp al +569 82209690.' });
     const target = (await d.query('SELECT id,name FROM users WHERE phone=$1', [np.phone])).rows[0];
     if (!target) return res.status(404).json({ error: 'Ese numero no esta registrado.' });
     if (target.id === helperId) return res.status(400).json({ error: 'Ya estas dentro: cambia tu clave desde tu perfil.' });
@@ -238,6 +276,32 @@ app.put('/api/users/:id/avatar', async (req, res) => {
     );
     if (!r.rows[0]) return res.status(404).json({ error: 'Usuario no encontrado' });
     res.json({ user: r.rows[0] });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Backup solo-admin: descarga todo (usuarios sin claves, fotos, chats).
+// El admin lo guarda cada semana en su PC/Drive.
+app.get('/api/admin/backup', async (req, res) => {
+  try {
+    const adminId = Number(req.query.adminId) || 0;
+    const d = getDb();
+    const admin = (await d.query('SELECT id,is_admin,phone FROM users WHERE id=$1', [adminId])).rows[0];
+    const ok = !!admin && (Number(admin.is_admin) === 1 || String(admin.phone || '').replace(/\s/g, '') === '+56982209690');
+    if (!ok) return res.status(403).json({ error: 'Solo el admin puede descargar el respaldo.' });
+    const users = (await d.query('SELECT id,name,role,family,avatar,birthdate,phone,created_at FROM users ORDER BY id')).rows;
+    const posts = (await d.query('SELECT * FROM posts ORDER BY id')).rows;
+    for (const p of posts) {
+      p.comments = (await d.query('SELECT id,user_name,text,created_at FROM comments WHERE post_id=$1 ORDER BY id', [p.id])).rows;
+      p.likes = (await d.query('SELECT user_id FROM likes WHERE post_id=$1', [p.id])).rows.map((x) => x.user_id);
+    }
+    const channels = (await d.query('SELECT * FROM channels ORDER BY id')).rows;
+    let messages = [];
+    try {
+      messages = (await d.query('SELECT id,channel_id,sender,text,LEFT(image_url,200000) AS image_url,created_at FROM messages ORDER BY id LIMIT 2000')).rows;
+    } catch (e) {
+      messages = (await d.query('SELECT id,channel_id,sender,text,created_at FROM messages ORDER BY id LIMIT 2000')).rows;
+    }
+    res.json({ app: 'MiFamilia', at: new Date().toISOString(), users, posts, channels, messages });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

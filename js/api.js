@@ -19,6 +19,7 @@ var Api = (function () {
     post: function (url, body) { return req('POST', url, body); },
     health: () => req('GET', '/api/health'),
     users: () => req('GET', '/api/users'),
+    usersAs: (meId) => req('GET', '/api/users?meId=' + meId),
     posts: () => req('GET', '/api/posts'),
     createPost: (d) => req('POST', '/api/posts', d),
     comment: (id, d) => req('POST', '/api/posts/' + id + '/comments', d),
@@ -32,6 +33,7 @@ var Api = (function () {
     reset: (d) => req('POST', '/api/auth/reset', d),
     updateAvatar: (id, avatar) => req('PUT', '/api/users/' + id + '/avatar', { avatar }),
     heartbeat: (userId) => req('POST', '/api/presence', { userId }),
-    presence: () => req('GET', '/api/presence')
+    presence: () => req('GET', '/api/presence'),
+    backup: (adminId) => req('GET', '/api/admin/backup?adminId=' + adminId)
   };
 })();

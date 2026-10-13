@@ -142,7 +142,10 @@
 <section id="tab-members-view" class="tab-content hidden flex-1 overflow-y-auto custom-scrollbar space-y-6" aria-label="Directorio de la familia">
 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center flex-wrap gap-3">
 <div><h2 class="font-bold text-xl">Directorio de la Familia</h2><p class="text-slate-500 text-sm">Integrantes agrupados por ramas</p></div>
+<div class="flex gap-2 flex-wrap">
+<button type="button" id="backup-btn" class="hidden bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold px-4 py-2.5 rounded-xl" title="Solo admin: descarga respaldo semanal"><i class="fa-solid fa-download mr-1"></i>Respaldo</button>
 <button type="button" id="invite-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl"><i class="fa-solid fa-user-plus mr-1"></i>Invitar familiar</button>
+</div>
 </div>
 <div id="families-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
 </section>
@@ -277,8 +280,9 @@
 </div>
 <p id="auth-error" class="text-xs text-rose-400" aria-live="polite"></p>
 <button type="submit" id="auth-submit" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold">Entrar</button>
-<div class="text-center">
+<div class="text-center space-y-2">
 <button type="button" id="auth-forgot" class="text-[11px] font-bold text-emerald-400 underline">Olvide mi contrasena</button>
+<button type="button" id="auth-help-admin" class="w-full py-2 rounded-xl text-[11px] font-bold bg-[#25D366] text-white"><i class="fa-brands fa-whatsapp mr-1"></i>Pedir ayuda al admin por WhatsApp</button>
 </div>
 <p class="text-[11px] text-slate-400 text-center">Al entrar aceptas compartir recuerdos solo con tu familia.</p>
 </form>

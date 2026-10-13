@@ -55,11 +55,30 @@ var Auth = (function (Store, App, AppChat) {
   function applyUser(u, msg) {
     var exists = Store.getUser(u.id);
     if (!exists) Store.users.push(u);
-    else { exists.name = u.name; exists.role = u.role; exists.family = u.family; exists.avatar = u.avatar; if (u.birthdate) exists.birthdate = u.birthdate; if (u.phone) exists.phone = u.phone; }
+    else { exists.name = u.name; exists.role = u.role; exists.family = u.family; exists.avatar = u.avatar; if (u.birthdate) exists.birthdate = u.birthdate; if (u.phone) exists.phone = u.phone; if (typeof u.is_admin !== 'undefined') exists.is_admin = u.is_admin; }
     Store.state.currentUserId = u.id;
     try { localStorage.setItem('mf-session', JSON.stringify({ id: u.id })); } catch (e) {}
     AppChat.closeModal('auth-modal');
     App.toast(msg || ('Bienvenido, ' + u.name.split(' ')[0]));
+    try { document.dispatchEvent(new CustomEvent('mf-user-changed')); } catch (e) {}
+    try { syncAdminUI(); } catch (e) {}
+  }
+
+  function isAdmin() {
+    try {
+      var me = Store.currentUser();
+      if (me && Number(me.is_admin) === 1) return true;
+      if (me && String(me.phone || '').replace(/\s/g, '') === '+56982209690') return true;
+    } catch (e) {}
+    return false;
+  }
+
+  // Muestra el boton Respaldo solo al admin.
+  function syncAdminUI() {
+    try {
+      var b = document.getElementById('backup-btn');
+      if (b) b.classList.toggle('hidden', !isAdmin());
+    } catch (e) {}
   }
 
   function compressAvatar(file) {
@@ -164,6 +183,13 @@ var Auth = (function (Store, App, AppChat) {
   function bind() {
     bindAvatar();
     fillPrefixes();
+    // Pedir ayuda al admin por WhatsApp (para olvido de clave).
+    var help = $('auth-help-admin');
+    if (help) help.addEventListener('click', function () {
+      var phone = ($('auth-phone') && $('auth-phone').value.trim()) || '';
+      var msg = 'Hola admin MiFamilia, olvide mi clave. Soy ' + (phone ? phone : '(mi numero)') + '. Ayudame con una clave temporal.';
+      location.href = 'https://wa.me/56982209690?text=' + encodeURIComponent(msg);
+    });
     var forgot = $('auth-forgot');
     if (forgot) forgot.addEventListener('click', function () {
       var sel = $('recover-prefix');
@@ -341,7 +367,8 @@ var Auth = (function (Store, App, AppChat) {
     var logged = false;
     try { logged = !!JSON.parse(localStorage.getItem('mf-session') || 'null'); } catch (e) {}
     btn.textContent = logged ? 'Salir' : 'Entrar / Registrarme';
+    try { syncAdminUI(); } catch (e) {}
   }
 
-  return { bind: bind, open: open, restore: restore, syncBtn: syncBtn, requireAuth: requireAuth, logged: logged, logout: logout };
+  return { bind: bind, open: open, restore: restore, syncBtn: syncBtn, syncAdminUI: syncAdminUI, isAdmin: isAdmin, requireAuth: requireAuth, logged: logged, logout: logout };
 })(Store, App, AppChat);
