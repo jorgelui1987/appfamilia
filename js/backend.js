@@ -149,6 +149,9 @@ var Backend = (function (Store) {
     try {
       if (typeof AppChat !== 'undefined' && AppChat.renderChannels) AppChat.renderChannels();
     } catch (e) {}
+    try {
+      if (typeof AppChat !== 'undefined' && AppChat.refreshTabBadge) AppChat.refreshTabBadge();
+    } catch (e) {}
   }
 
   async function refreshPosts() {

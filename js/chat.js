@@ -208,7 +208,11 @@ var AppChat = (function (Store, App) {
       var sub = ch.subtitle || '';
       // En privados muestra "en linea" como WhatsApp cuando el otro esta en la app.
       if (ch.dm && peerOnline) sub = 'en linea';
-      el.innerHTML = avatar + '<div class="flex-1 overflow-hidden"><h4 class="font-bold text-sm truncate">' + escapeHtml(ch.name) + '</h4><p class="text-xs truncate ' + (ch.dm && peerOnline ? 'text-emerald-600 font-semibold' : 'text-slate-500') + '">' + escapeHtml(sub) + '</p></div>' + dotHtml;
+      // Contador verde estilo WhatsApp: cuantos mensajes nuevos tiene ese chat.
+      var unread = 0;
+      try { unread = unreadCount(ch.id); } catch (e) {}
+      var badge = unread > 0 ? '<span class="ml-2 shrink-0 min-w-[22px] h-[22px] px-1.5 rounded-full bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center" title="' + unread + ' mensajes nuevos">' + (unread > 99 ? '99+' : unread) + '</span>' : '';
+      el.innerHTML = avatar + '<div class="flex-1 overflow-hidden"><h4 class="font-bold text-sm truncate">' + escapeHtml(ch.name) + '</h4><p class="text-xs truncate ' + (ch.dm && peerOnline ? 'text-emerald-600 font-semibold' : 'text-slate-500') + '">' + escapeHtml(sub) + '</p></div>' + badge + dotHtml;
       list.appendChild(el);
     });
     if (!shown) {
@@ -254,17 +258,51 @@ var AppChat = (function (Store, App) {
     return msgs.length + '|' + (msgs.length ? String(msgs[msgs.length - 1].text).slice(0, 40) : '');
   }
 
-  // Guarda el ultimo aviso mostrado por canal para no repetirlo al reabrir.
-  function seenKey(id, last) {
-    return String(id) + '|' + String(last ? last.sender : '') + '|' + String(last ? last.text : '').slice(0, 40);
+  // No leidos estilo WhatsApp: cuenta mensajes de otros desde tu ultima lectura.
+  // Se guarda por chat en localStorage para que sobreviva al cerrar la app.
+  function readKey(id) { return 'mf-read-' + String(id); }
+  function lastReadIdx(id) {
+    try { return Number(localStorage.getItem(readKey(id)) || '0'); } catch (e) { return 0; }
   }
-  function wasSeen(id, last) {
+  function saveReadIdx(id, n) {
+    try { localStorage.setItem(readKey(id), String(n)); } catch (e) {}
+  }
+  function unreadCount(id) {
+    var msgs = Store.messages[id] || [];
+    var me = null;
+    try { me = Store.currentUser().name; } catch (e) {}
+    var read = lastReadIdx(id);
+    var n = 0;
+    for (var i = read; i < msgs.length; i++) {
+      if (msgs[i] && msgs[i].sender !== me) n++;
+    }
+    // Si estas viendo ese chat ahora, no cuenta (ya lo estas leyendo).
     try {
-      return localStorage.getItem('mf-seen-' + seenKey(id, last)) === '1';
-    } catch (e) { return false; }
+      var v = document.getElementById('tab-chat-view');
+      if (v && !v.classList.contains('hidden') && String(Store.state.activeChatId) === String(id)) return 0;
+    } catch (e) {}
+    return n;
   }
-  function markSeen(id, last) {
-    try { localStorage.setItem('mf-seen-' + seenKey(id, last), '1'); } catch (e) {}
+  function markChatRead(id) {
+    var msgs = Store.messages[id] || [];
+    saveReadIdx(id, msgs.length);
+    refreshTabBadge();
+  }
+
+  // Punto/contador en la barra inferior = suma de no leidos de todos los chats.
+  function refreshTabBadge() {
+    try {
+      var total = 0;
+      Store.channels.forEach(function (c) { total += unreadCount(c.id); });
+      var dot = $('mob-chat-dot');
+      if (!dot) return;
+      if (total > 0) {
+        dot.textContent = total > 99 ? '99+' : String(total);
+        dot.classList.remove('hidden');
+      } else {
+        dot.classList.add('hidden');
+      }
+    } catch (e) {}
   }
 
   function notifyIncoming(channelId, text) {
@@ -278,22 +316,15 @@ var AppChat = (function (Store, App) {
       if (inChat) return;
       var ch = null;
       Store.channels.forEach(function (c) { if (String(c.id) === String(channelId)) ch = c; });
-      var msgs = Store.messages[channelId] || [];
-      var last = msgs[msgs.length - 1];
-      // Si ya avisamos este mensaje antes (ej. al reabrir la app), no repetir.
-      if (last && wasSeen(channelId, last)) return;
-      if (last) markSeen(channelId, last);
+      var n = unreadCount(channelId);
       var name = ch ? ch.name : 'Chat';
-      App.toast('Nuevo mensaje en ' + name.split(' ').slice(0, 2).join(' ') + (text ? ': ' + String(text).slice(0, 60) : ''));
+      App.toast('Nuevo mensaje en ' + name.split(' ').slice(0, 2).join(' ') + (n > 1 ? ' (' + n + ' nuevos)' : '') + (text ? ': ' + String(text).slice(0, 60) : ''));
     } catch (e) {
       App.toast('Tienes un mensaje nuevo');
     }
     try { if (typeof Sound !== 'undefined') Sound.play(); } catch (e) {}
     try { if (navigator.vibrate) navigator.vibrate([80, 40, 80]); } catch (e) {}
-    try {
-      var dot = $('mob-chat-dot');
-      if (dot) dot.classList.remove('hidden');
-    } catch (e) {}
+    try { refreshTabBadge(); renderChannels(); } catch (e) {}
   }
 
   var watchTimer = null;
@@ -309,17 +340,13 @@ var AppChat = (function (Store, App) {
     return snap;
   }
 
-  // Se llama despues de Backend.load(): marca todo lo ya leido como visto.
+  // Se llama despues de Backend.load(): marca el chat abierto como leido y
+  // prepara el vigilante sin avisar de mensajes viejos.
   function markAllSeenNow() {
     watchState = snapshotAll();
     watchReady = true;
-    try {
-      Store.channels.forEach(function (c) {
-        var msgs = Store.messages[c.id] || [];
-        var last = msgs[msgs.length - 1];
-        if (last) markSeen(c.id, last);
-      });
-    } catch (e) {}
+    try { markChatRead(Store.state.activeChatId); } catch (e) {}
+    try { renderChannels(); } catch (e) {}
   }
 
   function startWatcher() {
@@ -351,6 +378,7 @@ var AppChat = (function (Store, App) {
               var msgs = Store.messages[id] || [];
               var last = msgs[msgs.length - 1];
               if (last && last.sender !== Store.currentUser().name) {
+                try { renderChannels(); refreshTabBadge(); } catch (e) {}
                 notifyIncoming(id, last.text);
               }
             }
@@ -376,21 +404,8 @@ var AppChat = (function (Store, App) {
         if (now !== lastCount) {
           lastCount = now;
           renderMessages();
-          // Avisa solo si NO estas viendo ese chat y es de otro familiar.
-          // Si ya lo leiste antes, no repitas el aviso.
-          var msgs = Store.messages[id] || [];
-          var last = msgs[msgs.length - 1];
-          var viewing = false;
-          try {
-            var v = $('tab-chat-view');
-            viewing = v && !v.classList.contains('hidden') && String(Store.state.activeChatId) === String(id);
-          } catch (e) {}
-          if (!viewing && last && last.sender !== Store.currentUser().name && !wasSeen(id, last)) {
-            markSeen(id, last);
-            App.toast('Nuevo mensaje de ' + last.sender.split(' ')[0]);
-            if (typeof Sound !== 'undefined') Sound.play();
-            try { if (navigator.vibrate) navigator.vibrate(80); } catch (e) {}
-          }
+          markChatRead(id);
+          renderChannels();
         }
       });
     }, 5000);
@@ -467,14 +482,8 @@ var AppChat = (function (Store, App) {
             if (now !== lastCount) {
               lastCount = now;
               renderMessages();
-              var msgs = Store.messages[id] || [];
-              var last = msgs[msgs.length - 1];
-              if (last && last.sender !== Store.currentUser().name && !wasSeen(id, last)) {
-                markSeen(id, last);
-                App.toast('Nuevo mensaje de ' + last.sender.split(' ')[0]);
-                try { if (typeof Sound !== 'undefined') Sound.play(); } catch (e) {}
-                try { if (navigator.vibrate) navigator.vibrate(80); } catch (e) {}
-              }
+              markChatRead(id);
+              renderChannels();
             }
           });
         } catch (e) {}
@@ -501,12 +510,8 @@ var AppChat = (function (Store, App) {
 
   function selectChannel(id) {
     Store.state.activeChatId = id;
-    // Lo abriste = ya lo leiste: no volver a avisar de estos mensajes.
-    try {
-      var msgs = Store.messages[id] || [];
-      var last = msgs[msgs.length - 1];
-      if (last) markSeen(id, last);
-    } catch (e) {}
+    // Lo abriste = ya lo leiste: limpia el contador verde.
+    try { markChatRead(id); } catch (e) {}
     var ch = null;
     Store.channels.forEach(function (c) { if (c.id === id) ch = c; });
     if (ch) {
@@ -578,8 +583,7 @@ var AppChat = (function (Store, App) {
     document.addEventListener('click', function (e) {
       var tab = e.target.closest && e.target.closest('[data-tab="chat"]');
       if (tab) {
-        var dot = $('mob-chat-dot');
-        if (dot) dot.classList.add('hidden');
+        try { markChatRead(Store.state.activeChatId); renderChannels(); } catch (ee) {}
       }
     });
     $('chat-photo-btn').addEventListener('click', function () {
@@ -587,5 +591,5 @@ var AppChat = (function (Store, App) {
     });
   }
 
-  return { openModal: openModal, closeModal: closeModal, renderChannels: renderChannels, renderMessages: renderMessages, selectChannel: selectChannel, bindChat: bindChat, openDM: openDM, restoreDMs: restoreDMs, markAllSeenNow: markAllSeenNow, ensureDMsForAllUsers: ensureDMsForAllUsers };
+  return { openModal: openModal, closeModal: closeModal, renderChannels: renderChannels, renderMessages: renderMessages, selectChannel: selectChannel, bindChat: bindChat, openDM: openDM, restoreDMs: restoreDMs, markAllSeenNow: markAllSeenNow, ensureDMsForAllUsers: ensureDMsForAllUsers, refreshTabBadge: refreshTabBadge, markChatRead: markChatRead, unreadCount: unreadCount };
 })(Store, App);
