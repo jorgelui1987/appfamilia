@@ -225,8 +225,8 @@
 </div>
 </div>
 <!-- AUTH MODAL -->
-<div id="auth-modal" class="modal fixed inset-0 bg-slate-900/80 z-[60] hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="auth-title" data-locked="true">
-<div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl">
+<div id="auth-modal" class="modal fixed inset-0 bg-slate-900/80 z-[60] hidden items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="auth-title" data-locked="true">
+<div class="bg-white rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-2xl my-4 max-h-[calc(100dvh-2rem)] overflow-y-auto custom-scrollbar">
 <div class="flex items-center gap-3 mb-3">
 <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white"><i class="fa-solid fa-house-chimney-window"></i></div>
 <div><h3 id="auth-title" class="font-bold text-lg leading-tight">MiFamilia Privado</h3><p class="text-xs text-slate-500">Primero ingresa con tu numero y contrasena</p></div>
@@ -250,16 +250,16 @@
 </div>
 <div id="auth-name-wrap" class="hidden">
 <label class="block text-xs font-semibold mb-1" for="auth-name">Nombre y apellido</label>
-<input id="auth-name" type="text" placeholder="Ej: Ana Castro" maxlength="80" autocomplete="name" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs" />
+<input id="auth-name" type="text" placeholder="Ej: Ana Castro" maxlength="80" autocomplete="name" class="w-full p-2 border border-slate-200 rounded-xl text-xs" />
 </div>
 <div id="auth-birth-wrap" class="hidden">
 <label class="block text-xs font-semibold mb-1" for="auth-birth">Fecha de nacimiento *</label>
-<input id="auth-birth" type="date" required maxlength="10" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs" />
+<input id="auth-birth" type="date" required maxlength="10" class="w-full p-2 border border-slate-200 rounded-xl text-xs" />
 <p class="text-[11px] text-slate-400 mt-1">Para mostrar tu cumpleanos a la familia.</p>
 </div>
 <div id="auth-family-wrap" class="hidden">
 <label class="block text-xs font-semibold mb-1" for="auth-family">Familia</label>
-<input id="auth-family" type="text" placeholder="Ej: Familia Castro" maxlength="80" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs" />
+<input id="auth-family" type="text" placeholder="Ej: Familia Castro" maxlength="80" class="w-full p-2 border border-slate-200 rounded-xl text-xs" />
 </div>
 <div>
 <label class="block text-xs font-semibold mb-1" for="auth-phone">Numero de telefono</label>
