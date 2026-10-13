@@ -164,6 +164,17 @@ var Backend = (function (Store) {
         if (!Store.posts.some((p) => String(p.id) === String(lp.id))) Store.posts.push(lp);
       });
       loadLocalPosts();
+      // Dedupe comentarios (el optimista 'tmp-...' + el que llego de la nube).
+      Store.posts.forEach((p) => {
+        if (!Array.isArray(p.comments)) return;
+        const seen = {};
+        p.comments = p.comments.filter((c) => {
+          const k = String(c.userName) + '|' + String(c.text);
+          if (seen[k]) return false;
+          seen[k] = true;
+          return true;
+        });
+      });
     } catch (e) { /* conserva datos locales */ }
   }
 

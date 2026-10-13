@@ -75,7 +75,8 @@ var App = (function (Store) {
         '<div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs"><button type="button" data-action="like" class="flex items-center gap-1.5 font-semibold transition ' + (liked ? 'text-rose-600' : 'text-slate-500 hover:text-rose-600') + '"><i class="' + (liked ? 'fa-solid' : 'fa-regular') + ' fa-heart text-base"></i><span>' + post.likes.length + ' Les gusta</span></button>' +
         '<span class="text-slate-400"><i class="fa-regular fa-comment mr-1"></i> ' + post.comments.length + ' comentarios</span></div>' +
         '<div class="space-y-2 pt-2 bg-slate-50 p-3 rounded-xl">' +
-        post.comments.map(function (c) { return '<div class="text-xs"><span class="font-bold text-slate-800">' + escapeHtml(c.userName) + ':</span> <span class="text-slate-600">' + escapeHtml(c.text) + '</span></div>'; }).join('') +
+        post.comments.slice(-10).map(function (c) { return '<div class="text-xs"><span class="font-bold text-slate-800">' + escapeHtml(c.userName) + ':</span> <span class="text-slate-600">' + escapeHtml(c.text) + '</span></div>'; }).join('') +
+        (post.comments.length > 10 ? '<p class="text-[10px] text-slate-400">Mostrando los ultimos 10 de ' + post.comments.length + '</p>' : '') +
         '<form data-comment-form class="mt-2 flex gap-2"><label class="sr-only" for="c-' + post.id + '">Comentar</label><input id="c-' + post.id + '" type="text" placeholder="Escribe un comentario familiar..." maxlength="300" class="flex-1 bg-white px-3 py-1.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-emerald-500" required /><button type="submit" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-700 transition">Enviar</button></form>' +
         '</div></div>';
       if (typeof ExtrasB !== 'undefined') ExtrasB.renderReacts(post, el.querySelector('[data-reacts]'));
