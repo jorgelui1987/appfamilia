@@ -124,6 +124,7 @@ var COUNTRIES = [
   { code: '+34', name: 'Espana', flag: '🇪🇸' },
   { code: '+1', name: 'EE.UU.', flag: '🇺🇸' },
   { code: '+54', name: 'Argentina', flag: '🇦🇷' },
+  { code: '+569', name: 'Chile movil', flag: '🇨🇱' },
   { code: '+56', name: 'Chile', flag: '🇨🇱' },
   { code: '+51', name: 'Peru', flag: '🇵🇪' },
   { code: '+58', name: 'Venezuela', flag: '🇻🇪' },
@@ -149,6 +150,43 @@ function avatarFor(name) {
   var initial = encodeURIComponent((name || 'F').trim().charAt(0).toUpperCase() || 'F');
   return 'https://ui-avatars.com/api/?name=' + initial + '&background=10b981&color=fff&size=150';
 }
+
+// Crea el admin si aun no existe (para entrar la primera vez).
+// POST /api/auth/seed-admin { name, phone, password, birthdate, family }
+app.post('/api/auth/seed-admin', async (req, res) => {
+  try {
+    const b = req.body || {};
+    const name = String(b.name || 'Admin').trim().slice(0, 80) || 'Admin';
+    const digits = String(b.phone || '56982209690').replace(/\D/g, '').slice(0, 15);
+    const pass = String(b.password || '');
+    const birthdate = String(b.birthdate || '1980-01-01').slice(0, 10);
+    const family = String(b.family || 'Mi Familia').trim().slice(0, 80) || 'Mi Familia';
+    if (pass.length < 6) return res.status(400).json({ error: 'Contrasena minimo 6 caracteres' });
+    const np = normPhone('+569', digits.replace(/^569/, ''));
+    if (np.phone.replace(/\s/g, '') !== '+56982209690') return res.status(403).json({ error: 'Solo el numero del admin.' });
+    const d = getDb();
+    const ex = (await d.query('SELECT id FROM users WHERE phone=$1', [np.phone])).rows[0];
+    if (ex) {
+      await d.query('UPDATE users SET is_admin=1 WHERE id=$1', [ex.id]);
+      return res.json({ ok: true, created: false });
+    }
+    const bcrypt = require('bcryptjs');
+    const hash = await bcrypt.hash(pass, 10);
+    try {
+      await d.query(
+        'INSERT INTO users (name,role,family,avatar,phone,pass_hash,birthdate,is_admin) VALUES ($1,$2,$3,$4,$5,$6,$7,1)',
+        [name, 'Admin', family, avatarFor(name), np.phone, hash, birthdate]
+      );
+    } catch (e) {
+      if (e.code === '23505') {
+        await d.query('UPDATE users SET is_admin=1 WHERE phone=$1', [np.phone]);
+        return res.json({ ok: true, created: false });
+      }
+      throw e;
+    }
+    res.status(201).json({ ok: true, created: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 app.post('/api/auth/register', async (req, res) => {
   try {

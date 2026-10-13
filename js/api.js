@@ -29,6 +29,7 @@ var Api = (function () {
     messages: (id) => req('GET', '/api/channels/' + id + '/messages'),
     sendMessage: (id, d) => req('POST', '/api/channels/' + id + '/messages', d),
     register: (d) => req('POST', '/api/auth/register', d),
+    seedAdmin: (d) => req('POST', '/api/auth/seed-admin', d),
     login: (d) => req('POST', '/api/auth/login', d),
     reset: (d) => req('POST', '/api/auth/reset', d),
     updateAvatar: (id, avatar) => req('PUT', '/api/users/' + id + '/avatar', { avatar }),
