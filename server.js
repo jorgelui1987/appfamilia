@@ -143,7 +143,8 @@ var COUNTRIES = [
 
 function normPhone(prefix, number) {
   var digits = String(number || '').replace(/\D/g, '').slice(0, 15);
-  return { phone: prefix + ' ' + digits, digits: digits };
+  var pre = String(prefix || '+52').trim().slice(0, 6);
+  return { phone: pre + ' ' + digits, digits: digits };
 }
 
 function avatarFor(name) {

@@ -216,7 +216,8 @@ var Auth = (function (Store, App, AppChat) {
         var m = String((err && err.message) || err);
         var j = null;
         try { var s = m.indexOf('{'); var x = m.lastIndexOf('}'); if (s > -1 && x > s) j = JSON.parse(m.slice(s, x + 1)); } catch (ee) {}
-        done((j && j.error) ? j.error : 'No se pudo: usa codigo +569, numero 82209690 y clave 6+');
+        if (/404/.test(m)) done('Servidor viejo (404): haz Redeploy en Dokploy y reintenta.');
+        else done((j && j.error) ? j.error : 'No se pudo: escribe una clave de 6+ y reintenta. ' + m.slice(0, 80));
       });
     });
     var forgot = $('auth-forgot');
