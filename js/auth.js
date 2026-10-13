@@ -323,7 +323,7 @@ var Auth = (function (Store, App, AppChat) {
         var full = prefix + ' ' + String(phone).replace(/\D/g, '');
         var hash = btoa(unescape(encodeURIComponent(pass)));
         var u = users.filter(function (x) { return x.phone === full && x.pass === hash; })[0];
-        if (!u) { $('auth-error').textContent = 'No existe esa cuenta en este dispositivo. Registrate primero.'; done(); return; }
+        if (!u) { $('auth-error').textContent = 'Sin servidor y no existe esa cuenta en este celu. Si es tu primera vez, toca Registrarme con +569 82209690.'; done(); return; }
         applyUser({ id: u.id, name: u.name, role: u.role, family: u.family, avatar: u.avatar, phone: u.phone }, 'Que bueno verte, ' + u.name.split(' ')[0]);
         document.dispatchEvent(new CustomEvent('mf-user-changed'));
         done();
@@ -358,12 +358,30 @@ var Auth = (function (Store, App, AppChat) {
           applyUser(r.user, 'Que bueno verte, ' + r.user.name.split(' ')[0]);
           document.dispatchEvent(new CustomEvent('mf-user-changed'));
         }).catch(function (err) {
-          if (/ECONNREFUSED|500|Failed to fetch|NetworkError|Load failed/i.test(String(err.message))) {
+          var m0 = String((err && err.message) || err);
+          // 404 = servidor viejo sin /api/auth/login nuevo: reintenta contra nube vieja.
+          if (/404/.test(m0)) {
+            fetch('/api/users').then(function (res) { return res.json(); }).then(function () {
+              done();
+              $('auth-error').textContent = 'Servidor desactualizado (404). Haz Redeploy en Dokploy.';
+            }).catch(function () {
+              localLogin(prefix, phone, pass);
+            });
+            return;
+          }
+          if (/ECONNREFUSED|Failed to fetch|NetworkError|Load failed/i.test(m0)) {
             localLogin(prefix, phone, pass);
+            return;
+          }
+          // 500 con ECONNREFUSED = DB caida: dilo claro.
+          if (/500/.test(m0) && /ECONNREFUSED|connect|database|db/i.test(m0)) {
+            done();
+            $('auth-error').textContent = 'Base de datos caida (500). Revisa Postgres en Dokploy.';
             return;
           }
           done();
           $('auth-error').textContent = cleanErr(err.message);
+        });
         });
       }
     });
