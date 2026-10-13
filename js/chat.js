@@ -237,14 +237,18 @@ var AppChat = (function (Store, App) {
     box.innerHTML = '';
     var me = Store.currentUser().name;
     var msgs = Store.messages[Store.state.activeChatId] || [];
-    if (!msgs.length) box.innerHTML = '<p class="text-center text-xs text-slate-400">Sin mensajes. Escribe el primero.</p>';
+    if (!msgs.length) box.innerHTML = '<p class="text-center text-xs text-slate-400">Sin mensajes. Escribe el primero o manda una foto con el clip.</p>';
     msgs.forEach(function (m) {
       var isMe = m.sender === me;
       var el = document.createElement('div');
       el.className = 'flex flex-col ' + (isMe ? 'items-end' : 'items-start');
       var head = isMe ? '' : '<span class="block font-bold text-emerald-600 text-[11px] mb-1">' + escapeHtml(m.sender) + '</span>';
-      el.innerHTML = '<div class="max-w-[80%] rounded-2xl p-3 shadow-sm text-xs fade-in ' + (isMe ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 rounded-tl-none') + '">' + head + '<p class="leading-relaxed"></p><span class="block text-[9px] text-right mt-1 ' + (isMe ? 'text-emerald-200' : 'text-slate-400') + '">' + escapeHtml(m.time) + '</span></div>';
-      el.querySelector('p').textContent = m.text;
+      var img = m.imageUrl || m.image_url || '';
+      var imgHtml = img ? '<img src="' + img + '" alt="Foto del chat" loading="lazy" class="rounded-xl mb-1.5 max-w-full cursor-pointer chat-photo-img" style="max-height:220px;object-fit:cover" data-action="view-chat-photo" />' : '';
+      var txtHtml = m.text ? '<p class="leading-relaxed"></p>' : '';
+      el.innerHTML = '<div class="max-w-[80%] rounded-2xl p-3 shadow-sm text-xs fade-in ' + (isMe ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 rounded-tl-none') + '">' + head + imgHtml + txtHtml + '<span class="block text-[9px] text-right mt-1 ' + (isMe ? 'text-emerald-200' : 'text-slate-400') + '">' + escapeHtml(m.time) + '</span></div>';
+      var p = el.querySelector('p');
+      if (p) p.textContent = m.text || '';
       box.appendChild(el);
     });
     box.scrollTop = box.scrollHeight;
@@ -565,7 +569,7 @@ var AppChat = (function (Store, App) {
       var id = Store.state.activeChatId;
       input.value = '';
       input.focus();
-      Backend.sendMessage(id, text.slice(0, 500)).then(function () {
+      Backend.sendMessage(id, text.slice(0, 500), '').then(function () {
         renderMessages();
         lastCount = fingerprint(id);
         if (!Store.backend.ok) App.toast('Mensaje guardado en este dispositivo (sin servidor)');
@@ -587,7 +591,56 @@ var AppChat = (function (Store, App) {
       }
     });
     $('chat-photo-btn').addEventListener('click', function () {
-      App.toast('Adjunta una foto desde el muro con Compartir recuerdo');
+      var f = $('chat-photo-file');
+      if (f) f.click();
+      else App.toast('Adjunta una foto desde el muro con Compartir recuerdo');
+    });
+    var chatFile = $('chat-photo-file');
+    if (chatFile) chatFile.addEventListener('change', function () {
+      var file = chatFile.files && chatFile.files[0];
+      chatFile.value = '';
+      if (!file) return;
+      if (!/^image\/(jpeg|png|webp)$/.test(file.type)) { App.toast('Solo JPG, PNG o WEBP'); return; }
+      if (file.size > 8 * 1024 * 1024) { App.toast('La foto supera 8MB'); return; }
+      var reader = new FileReader();
+      reader.onload = function (ev) {
+        var url = ev.target.result;
+        var img = new Image();
+        img.onload = function () {
+          try {
+            var w = img.naturalWidth || 1;
+            var h = img.naturalHeight || 1;
+            var scale = Math.min(1, 800 / Math.max(w, h));
+            var cw = Math.max(1, Math.round(w * scale));
+            var ch = Math.max(1, Math.round(h * scale));
+            var cv = document.createElement('canvas');
+            cv.width = cw; cv.height = ch;
+            cv.getContext('2d').drawImage(img, 0, 0, cw, ch);
+            url = cv.toDataURL('image/jpeg', 0.7);
+          } catch (e) {}
+          var id = Store.state.activeChatId;
+          var caption = ($('chat-input-text') && $('chat-input-text').value.trim()) || '';
+          if ($('chat-input-text')) $('chat-input-text').value = '';
+          App.toast('Enviando foto...');
+          Backend.sendMessage(id, caption.slice(0, 500), url).then(function () {
+            renderMessages();
+            lastCount = fingerprint(id);
+            markChatRead(id);
+            renderChannels();
+          });
+          renderMessages();
+        };
+        img.onerror = function () { App.toast('No se pudo leer esa foto'); };
+        img.src = url;
+      };
+      reader.readAsDataURL(file);
+    });
+    // Toca la foto del chat para verla grande.
+    $('chat-messages-container').addEventListener('click', function (e) {
+      var img = e.target.closest && e.target.closest('[data-action="view-chat-photo"]');
+      if (!img) return;
+      if (typeof Viewer !== 'undefined' && Viewer.open) Viewer.open(img.src, 'Foto del chat', '');
+      else { App.toast('Foto del chat'); }
     });
   }
 

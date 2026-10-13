@@ -130,7 +130,8 @@
 </div>
 <div id="chat-messages-container" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar" aria-live="polite"></div>
 <form id="chat-form" class="p-3 bg-slate-100 border-t border-slate-200 flex items-center gap-2">
-<button type="button" id="chat-photo-btn" class="text-slate-500 p-2" aria-label="Enviar imagen"><i class="fa-solid fa-paperclip text-lg"></i></button>
+<button type="button" id="chat-photo-btn" class="text-slate-500 p-2" aria-label="Enviar foto en el chat"><i class="fa-solid fa-paperclip text-lg"></i></button>
+<input id="chat-photo-file" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" aria-hidden="true" />
 <label class="sr-only" for="chat-input-text">Escribe un mensaje</label>
 <input id="chat-input-text" type="text" placeholder="Escribe un mensaje..." maxlength="500" autocomplete="off" class="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-full text-sm" />
 <button type="submit" class="w-10 h-10 bg-emerald-600 text-white rounded-full" aria-label="Enviar"><i class="fa-solid fa-paper-plane text-sm"></i></button>

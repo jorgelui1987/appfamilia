@@ -181,16 +181,26 @@ var Backend = (function (Store) {
     } catch (e) { /* conserva datos locales */ }
   }
 
+  function normMsg(m) {
+    return {
+      sender: m.sender || 'Familiar',
+      text: m.text || '',
+      imageUrl: m.imageUrl || m.image_url || '',
+      time: m.time || '',
+      local: !!m.local
+    };
+  }
+
   function mergeMsgs(id, serverMsgs) {
-    const local = (Store.messages[id] || []).filter((m) => m.local);
+    const local = (Store.messages[id] || []).filter((m) => m.local).map(normMsg);
     const seen = {};
     const out = [];
-    (serverMsgs || []).forEach((m) => {
-      const k = m.sender + '|' + m.text + '|' + m.time;
+    (serverMsgs || []).map(normMsg).forEach((m) => {
+      const k = m.sender + '|' + m.text + '|' + String(m.imageUrl || '').slice(-40) + '|' + m.time;
       if (!seen[k]) { seen[k] = true; out.push(m); }
     });
     local.forEach((m) => {
-      const k = m.sender + '|' + m.text + '|' + m.time;
+      const k = m.sender + '|' + m.text + '|' + String(m.imageUrl || '').slice(-40) + '|' + m.time;
       if (!seen[k]) { seen[k] = true; out.push(m); }
     });
     Store.messages[id] = out;
@@ -289,9 +299,23 @@ var Backend = (function (Store) {
     try {
       const slim = {};
       Object.keys(Store.messages || {}).forEach((k) => {
-        slim[k] = (Store.messages[k] || []).slice(-100);
+        // Las fotos pesan mucho: en local guarda max 30 por chat y recorta.
+        slim[k] = (Store.messages[k] || []).slice(-30).map((m) => ({
+          sender: m.sender, text: String(m.text || '').slice(0, 500),
+          imageUrl: String(m.imageUrl || m.image_url || '').slice(0, 120000),
+          time: m.time, local: !!m.local
+        }));
       });
-      localStorage.setItem('mf-local-msgs', JSON.stringify(slim));
+      try {
+        localStorage.setItem('mf-local-msgs', JSON.stringify(slim));
+      } catch (e) {
+        // Cuota llena: guarda sin fotos antes que perder los textos.
+        const tiny = {};
+        Object.keys(slim).forEach((k) => {
+          tiny[k] = slim[k].map((m) => ({ sender: m.sender, text: m.text, imageUrl: '', time: m.time, local: m.local }));
+        });
+        try { localStorage.setItem('mf-local-msgs', JSON.stringify(tiny)); } catch (e2) {}
+      }
     } catch (e) {}
   }
 
@@ -333,7 +357,8 @@ var Backend = (function (Store) {
     }
   }
 
-  async function sendMessage(channelId, text) {
+  async function sendMessage(channelId, text, imageUrl) {
+    const img = String(imageUrl || '').slice(0, 350000);
     // Si es DM y hay nube, asegura el canal en Postgres antes de enviar.
     if (Store.backend.ok && String(channelId).startsWith('dm-')) {
       try {
@@ -346,14 +371,15 @@ var Backend = (function (Store) {
       } catch (e) { /* sigue: el POST del mensaje lo intentara igual */ }
     }
     try {
-      await Api.sendMessage(channelId, { sender: Store.currentUser().name, text: text });
+      await Api.sendMessage(channelId, { sender: Store.currentUser().name, text: text || '', imageUrl: img });
       await refreshMessages(channelId);
       saveLocalMsgs();
     } catch (e) {
       Store.messages[channelId] = Store.messages[channelId] || [];
       Store.messages[channelId].push({
         sender: Store.currentUser().name,
-        text: text,
+        text: text || '',
+        imageUrl: img,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         local: true
       });

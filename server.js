@@ -301,16 +301,33 @@ app.post('/api/channels/dm', async (req, res) => {
 
 app.get('/api/channels/:id/messages', async (req, res) => {
   try {
-    const r = await getDb().query('SELECT sender,text,created_at FROM messages WHERE channel_id=$1 ORDER BY id LIMIT 200', [req.params.id]);
-    res.json(r.rows.map((m) => ({ sender: m.sender, text: m.text, time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })));
+    let rows;
+    try {
+      rows = (await getDb().query('SELECT sender,text,image_url,created_at FROM messages WHERE channel_id=$1 ORDER BY id LIMIT 200', [req.params.id])).rows;
+    } catch (e) {
+      // Si la columna image_url aun no existe (DB vieja), lee sin ella.
+      rows = (await getDb().query('SELECT sender,text,created_at FROM messages WHERE channel_id=$1 ORDER BY id LIMIT 200', [req.params.id])).rows;
+    }
+    res.json(rows.map((m) => ({ sender: m.sender, text: m.text || '', imageUrl: m.image_url || '', time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/channels/:id/messages', async (req, res) => {
   try {
     const b = req.body || {};
-    if (!b.text || !String(b.text).trim()) return res.status(400).json({ error: 'texto requerido' });
-    await getDb().query('INSERT INTO messages (channel_id,sender,text) VALUES ($1,$2,$3)', [req.params.id, esc(b.sender).slice(0, 120) || 'Familiar', esc(b.text).slice(0, 500)]);
+    const text = String(b.text || '').trim();
+    const imageUrl = String(b.imageUrl || '').slice(0, 350000);
+    if (!text && !imageUrl) return res.status(400).json({ error: 'texto o foto requerido' });
+    try {
+      await getDb().query('INSERT INTO messages (channel_id,sender,text,image_url) VALUES ($1,$2,$3,$4)', [req.params.id, esc(b.sender).slice(0, 120) || 'Familiar', esc(text).slice(0, 500), imageUrl]);
+    } catch (e) {
+      // DB vieja sin columna image_url: guarda como texto con marcador.
+      if (imageUrl && /image_url|column/i.test(e.message || '')) {
+        await getDb().query('INSERT INTO messages (channel_id,sender,text) VALUES ($1,$2,$3)', [req.params.id, esc(b.sender).slice(0, 120) || 'Familiar', (text ? esc(text).slice(0, 400) + ' ' : '') + '[foto]']);
+      } else if (!imageUrl) {
+        await getDb().query('INSERT INTO messages (channel_id,sender,text) VALUES ($1,$2,$3)', [req.params.id, esc(b.sender).slice(0, 120) || 'Familiar', esc(text).slice(0, 500)]);
+      } else throw e;
+    }
     notifyChannel(req.params.id);
     res.status(201).json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }

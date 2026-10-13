@@ -56,8 +56,11 @@ CREATE TABLE IF NOT EXISTS messages (
   channel_id TEXT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
   sender TEXT NOT NULL,
   text TEXT NOT NULL,
+  image_url TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS image_url TEXT NOT NULL DEFAULT '';
 
 CREATE INDEX IF NOT EXISTS idx_posts_created ON posts(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id);
